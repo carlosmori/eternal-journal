@@ -1,16 +1,17 @@
 # Eternal Journal
 
-Diario en la blockchain. MVP con Next.js, NestJS y TypeScript.
+Journal on the blockchain. MVP with Next.js, NestJS and TypeScript.
 
-## Estructura
+## Structure
 
 ```
 ├── apps/
 │   ├── web/     # Next.js 15 + React + Tailwind
 │   └── api/     # NestJS 11 + TypeScript
+├── contracts/   # Solidity smart contract (Hardhat)
 ```
 
-## Ejecutar
+## Run
 
 ```bash
 npm install
@@ -20,17 +21,17 @@ npm run dev
 - **Frontend**: http://localhost:3000
 - **API**: http://localhost:3001
 
-## Flujo
+## Flow
 
-1. **Home** (`/`): Pantalla de bienvenida con botón "Entrar"
-2. **Journal** (`/journal`): Lista de citas (blureadas por defecto, clic para revelar) + botón "Agregar cita" (arriba a la derecha) que abre el popup
+1. **Home** (`/`): Welcome screen with "Enter" button
+2. **Journal** (`/journal`): List of entries (blurred by default, click to reveal) + "Add entry" button (top right) that opens the modal
 
-## Tecnologías
+## Technologies
 
-- **Frontend**: Next.js 15, React 19, Tailwind CSS, liquid glass style, paleta violeta, dark/light mode
+- **Frontend**: Next.js 15, React 19, Tailwind CSS, liquid glass style, violet palette, dark/light mode
 - **Backend**: NestJS 11, TypeScript
 - **Blockchain**: wagmi, viem, RainbowKit, Base Sepolia (https://sepolia.base.org)
 
 ## Blockchain
 
-Conecta tu wallet en Sepolia. Ver [docs/README-BLOCKCHAIN.md](docs/README-BLOCKCHAIN.md) para configuración y uso.
+Connect your wallet on Sepolia. See [docs/README-BLOCKCHAIN.md](docs/README-BLOCKCHAIN.md) for configuration and usage.

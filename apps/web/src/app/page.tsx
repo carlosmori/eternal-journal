@@ -16,13 +16,13 @@ export default function HomePage() {
             Eternal Journal
           </h1>
           <p className="text-violet-700/90 dark:text-violet-200/90 mb-8 text-lg">
-            Tu diario permanece para siempre
+            Your journal lasts forever
           </p>
           <Link
             href="/journal"
             className="inline-block px-8 py-3 rounded-xl bg-violet-600/80 hover:bg-violet-500 dark:bg-white/20 dark:hover:bg-white/30 backdrop-blur-md text-white font-medium transition-all duration-300 hover:scale-105"
           >
-            Entrar
+            Enter
           </Link>
         </div>
         <LatestBlock />

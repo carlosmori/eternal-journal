@@ -7,7 +7,7 @@ import './globals.css';
 
 export const metadata: Metadata = {
   title: 'Eternal Journal',
-  description: 'Tu diario permanece para siempre',
+  description: 'Your journal lasts forever',
 };
 
 export default async function RootLayout({
@@ -24,7 +24,7 @@ export default async function RootLayout({
   const htmlClass = isDark === true ? 'dark' : isDark === false ? '' : '';
 
   return (
-    <html lang="es" className={htmlClass} suppressHydrationWarning>
+    <html lang="en" className={htmlClass} suppressHydrationWarning>
       <body className="antialiased">
         <Script
           id="theme-init"

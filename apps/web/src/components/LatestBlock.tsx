@@ -17,7 +17,7 @@ export function LatestBlock() {
           timestamp: b.timestamp,
         });
       })
-      .catch((err) => setError(err?.message || 'Error al obtener el bloque'));
+      .catch((err) => setError(err?.message || 'Error fetching block'));
   }, []);
 
   if (error) {
@@ -31,7 +31,7 @@ export function LatestBlock() {
   if (!block) {
     return (
       <div className="glass-card p-4 text-sm text-violet-600 dark:text-violet-400 animate-pulse">
-        Obteniendo último bloque...
+        Fetching latest block...
       </div>
     );
   }
@@ -39,7 +39,7 @@ export function LatestBlock() {
   return (
     <div className="glass-card p-4 text-sm">
       <p className="font-medium text-violet-900 dark:text-violet-100 mb-2">
-        Último bloque (Base Sepolia)
+        Latest block (Base Sepolia)
       </p>
       <p>
         <span className="text-violet-600 dark:text-violet-400">#</span>{' '}
