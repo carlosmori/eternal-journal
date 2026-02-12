@@ -90,4 +90,4 @@ export const ETERNAL_JOURNAL_ABI = [
 // Contract address deployed on Base Sepolia
 // UPDATE after running: npm run deploy:sepolia in contracts/
 export const ETERNAL_JOURNAL_ADDRESS =
-  '0x0000000000000000000000000000000000000000' as `0x${string}`;
+  '0xB14F114C7bef1C2ADdb06Aa742BA180dC8E6d4af' as `0x${string}`;

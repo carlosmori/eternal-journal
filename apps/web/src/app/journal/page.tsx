@@ -4,13 +4,14 @@ import { ConnectButton } from '@rainbow-me/rainbowkit';
 import { useTheme } from '@/components/ThemeProvider';
 import { AddQuoteModal } from '@/components/AddQuoteModal';
 import { QuoteCard } from '@/components/QuoteCard';
-import { LatestBlock } from '@/components/LatestBlock';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useAccount, useSignMessage, useReadContract } from 'wagmi';
 import { hexToBytes } from 'viem';
 import { deriveKey, decryptEntry, SIGN_MESSAGE, type JournalEntry } from '@/lib/crypto';
 import { ETERNAL_JOURNAL_ABI, ETERNAL_JOURNAL_ADDRESS } from '@/lib/contract';
 import { sepoliaPublicClient } from '@/lib/sepoliaClient';
+
+const PAGE_SIZE = 20;
 
 interface DecryptedEntry {
   entry: JournalEntry;
@@ -24,6 +25,8 @@ export default function JournalPage() {
 
   const [encryptionKey, setEncryptionKey] = useState<Uint8Array | null>(null);
   const [entries, setEntries] = useState<DecryptedEntry[]>([]);
+  const [currentPage, setCurrentPage] = useState(0);
+  const [allRevealed, setAllRevealed] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isUnlocking, setIsUnlocking] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
@@ -36,8 +39,12 @@ export default function JournalPage() {
     args: address ? [address] : undefined,
     query: {
       enabled: !!address,
+      refetchInterval: false,
     },
   });
+
+  const lastFetchedRef = useRef<{ address: string; count: number; page: number } | null>(null);
+  const manualRefreshRef = useRef(false);
 
   const handleUnlock = async () => {
     setIsUnlocking(true);
@@ -58,80 +65,119 @@ export default function JournalPage() {
     }
   };
 
-  const fetchEntries = useCallback(async () => {
-    if (!address || !encryptionKey || entryCount === undefined) return;
+  const fetchPage = useCallback(
+    async (page: number, overrideCount?: number) => {
+      const count =
+        overrideCount !== undefined ? overrideCount : Number(entryCount ?? 0);
+      if (!address || !encryptionKey || (overrideCount === undefined && entryCount === undefined))
+        return;
 
-    const count = Number(entryCount);
-    if (count === 0) {
-      setEntries([]);
-      return;
-    }
-
-    setIsLoading(true);
-    setError('');
-
-    try {
-      const decrypted: DecryptedEntry[] = [];
-      const batchSize = 10;
-
-      for (let i = 0; i < count; i += batchSize) {
-        const batch = [];
-        for (let j = i; j < Math.min(i + batchSize, count); j++) {
-          batch.push(
-            sepoliaPublicClient.readContract({
-              address: ETERNAL_JOURNAL_ADDRESS,
-              abi: ETERNAL_JOURNAL_ABI,
-              functionName: 'getEntry',
-              args: [address, BigInt(j)],
-            })
-          );
-        }
-
-        const results = await Promise.all(batch);
-
-        for (const result of results) {
-          try {
-            const { timestamp, ciphertext } = result as { timestamp: bigint; ciphertext: `0x${string}` };
-            const ciphertextBytes = hexToBytes(ciphertext);
-            const entry = decryptEntry(encryptionKey, ciphertextBytes);
-            decrypted.push({
-              entry,
-              timestamp: Number(timestamp),
-            });
-          } catch {
-            console.warn('Could not decrypt an entry');
-          }
-        }
+      if (count === 0) {
+        setEntries([]);
+        return;
       }
 
-      decrypted.reverse();
-      setEntries(decrypted);
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Unknown error';
-      setError('Error reading entries: ' + msg.slice(0, 100));
-    } finally {
-      setIsLoading(false);
-    }
-  }, [address, encryptionKey, entryCount]);
+      const totalPages = Math.ceil(count / PAGE_SIZE);
+      const safePage = Math.min(page, Math.max(0, totalPages - 1));
+      const startIdx = Math.max(0, count - 1 - safePage * PAGE_SIZE);
+      const endIdx = Math.max(0, count - 1 - (safePage + 1) * PAGE_SIZE + 1);
+
+      setIsLoading(true);
+      setError('');
+
+      try {
+        const decrypted: DecryptedEntry[] = [];
+        const batchSize = 10;
+
+        for (let i = startIdx; i >= endIdx; i -= batchSize) {
+          const batch = [];
+          for (let j = i; j > Math.max(endIdx - 1, i - batchSize); j--) {
+            batch.push(
+              sepoliaPublicClient.readContract({
+                address: ETERNAL_JOURNAL_ADDRESS,
+                abi: ETERNAL_JOURNAL_ABI,
+                functionName: 'getEntry',
+                args: [address, BigInt(j)],
+              })
+            );
+          }
+
+          const results = await Promise.all(batch);
+
+          for (const result of results) {
+            try {
+              const { timestamp, ciphertext } = result as {
+                timestamp: bigint;
+                ciphertext: `0x${string}`;
+              };
+              const ciphertextBytes = hexToBytes(ciphertext);
+              const entry = decryptEntry(encryptionKey, ciphertextBytes);
+              decrypted.push({
+                entry,
+                timestamp: Number(timestamp),
+              });
+            } catch {
+              console.warn('Could not decrypt an entry');
+            }
+          }
+        }
+
+        setEntries(decrypted);
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : 'Unknown error';
+        setError('Error reading entries: ' + msg.slice(0, 100));
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [address, encryptionKey, entryCount],
+  );
 
   useEffect(() => {
-    if (encryptionKey && entryCount !== undefined) {
-      fetchEntries();
+    if (!encryptionKey || !address || entryCount === undefined || isLoading || manualRefreshRef.current) return;
+
+    const count = Number(entryCount);
+    const totalPages = Math.ceil(count / PAGE_SIZE);
+    const safePage = Math.min(currentPage, Math.max(0, totalPages - 1));
+
+    if (
+      lastFetchedRef.current?.address === address &&
+      lastFetchedRef.current?.count === count &&
+      lastFetchedRef.current?.page === safePage
+    ) {
+      return;
     }
-  }, [encryptionKey, entryCount, fetchEntries]);
+    lastFetchedRef.current = { address, count, page: safePage };
+    fetchPage(safePage);
+  }, [encryptionKey, entryCount, address, fetchPage, currentPage, isLoading]);
 
   useEffect(() => {
     setEncryptionKey(null);
     setEntries([]);
     setError('');
+    setCurrentPage(0);
+    setAllRevealed(false);
+    lastFetchedRef.current = null;
   }, [address]);
 
-  const handleQuoteAdded = () => {
+  const handleQuoteAdded = useCallback(() => {
     setModalOpen(false);
-    refetchCount().then(() => {
-      fetchEntries();
+    lastFetchedRef.current = null;
+    manualRefreshRef.current = true;
+    // Optimistic: tx confirmed = count increased by 1 (avoids RPC propagation delay)
+    const newCount = Number(entryCount ?? 0) + 1;
+    setCurrentPage(0);
+    fetchPage(0, newCount).finally(() => {
+      if (address) {
+        lastFetchedRef.current = { address, count: newCount, page: 0 };
+      }
+      manualRefreshRef.current = false;
     });
-  };
+    refetchCount();
+  }, [address, entryCount, refetchCount, fetchPage]);
+
+  const totalCount = Number(entryCount ?? 0);
+  const totalPages = Math.ceil(totalCount / PAGE_SIZE);
 
   return (
     <main className="min-h-screen bg-gradient-to-br from-violet-100 via-violet-50 to-fuchsia-100 dark:from-violet-950 dark:via-violet-900 dark:to-fuchsia-950 transition-colors">
@@ -165,10 +211,6 @@ export default function JournalPage() {
         <h2 className="text-xl font-semibold text-violet-900 dark:text-violet-100 mb-6">
           My entries
         </h2>
-
-        <div className="mb-8">
-          <LatestBlock />
-        </div>
 
         {!isConnected && (
           <div className="glass-card p-12 text-center text-violet-600 dark:text-violet-400">
@@ -220,15 +262,49 @@ export default function JournalPage() {
         )}
 
         {isConnected && encryptionKey && !isLoading && entries.length > 0 && (
-          <div className="space-y-4">
-            {entries.map((item, idx) => (
-              <QuoteCard
-                key={idx}
-                entry={item.entry}
-                timestamp={item.timestamp}
-              />
-            ))}
-          </div>
+          <>
+            {!allRevealed ? (
+              <div
+                onClick={() => setAllRevealed(true)}
+                className="glass-card p-8 text-center cursor-pointer hover:bg-violet-100/50 dark:hover:bg-violet-800/30 transition-colors rounded-xl mb-4"
+              >
+                <p className="text-violet-600 dark:text-violet-400 font-medium">
+                  Click to reveal all entries
+                </p>
+              </div>
+            ) : null}
+            <div className="space-y-4">
+              {entries.map((item, idx) => (
+                <QuoteCard
+                  key={idx}
+                  entry={item.entry}
+                  timestamp={item.timestamp}
+                  revealed={allRevealed}
+                />
+              ))}
+            </div>
+            {totalPages > 1 && (
+              <div className="flex justify-center items-center gap-4 mt-6">
+                <button
+                  onClick={() => setCurrentPage((p) => Math.max(0, p - 1))}
+                  disabled={currentPage === 0}
+                  className="px-4 py-2 rounded-xl bg-violet-200/50 dark:bg-violet-800/50 text-violet-700 dark:text-violet-300 font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-violet-200/70 dark:hover:bg-violet-800/70 transition-colors"
+                >
+                  Previous
+                </button>
+                <span className="text-violet-600 dark:text-violet-400 text-sm">
+                  Page {currentPage + 1} of {totalPages}
+                </span>
+                <button
+                  onClick={() => setCurrentPage((p) => Math.min(totalPages - 1, p + 1))}
+                  disabled={currentPage >= totalPages - 1}
+                  className="px-4 py-2 rounded-xl bg-violet-200/50 dark:bg-violet-800/50 text-violet-700 dark:text-violet-300 font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-violet-200/70 dark:hover:bg-violet-800/70 transition-colors"
+                >
+                  Next
+                </button>
+              </div>
+            )}
+          </>
         )}
 
         {error && encryptionKey && (

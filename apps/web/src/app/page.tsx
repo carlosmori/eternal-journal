@@ -1,7 +1,6 @@
 import Link from 'next/link';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
 import { ThemeToggle } from '@/components/ThemeToggle';
-import { LatestBlock } from '@/components/LatestBlock';
 
 export default function HomePage() {
   return (
@@ -25,7 +24,6 @@ export default function HomePage() {
             Enter
           </Link>
         </div>
-        <LatestBlock />
       </div>
     </main>
   );

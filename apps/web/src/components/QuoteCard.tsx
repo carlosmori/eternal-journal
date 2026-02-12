@@ -1,16 +1,14 @@
 'use client';
 
-import { useState } from 'react';
 import type { JournalEntry } from '@/lib/crypto';
 
 interface QuoteCardProps {
   entry: JournalEntry;
   timestamp: number;
+  revealed: boolean;
 }
 
-export function QuoteCard({ entry, timestamp }: QuoteCardProps) {
-  const [revealed, setRevealed] = useState(false);
-
+export function QuoteCard({ entry, timestamp, revealed }: QuoteCardProps) {
   const blockDate = new Date(timestamp * 1000).toLocaleDateString('en-US', {
     day: '2-digit',
     month: 'short',
@@ -21,8 +19,7 @@ export function QuoteCard({ entry, timestamp }: QuoteCardProps) {
 
   return (
     <article
-      onClick={() => setRevealed(true)}
-      className={`glass-card p-6 cursor-pointer transition-all duration-300 ${
+      className={`glass-card p-6 transition-all duration-300 ${
         revealed ? 'blur-none' : ''
       }`}
     >
@@ -54,12 +51,6 @@ export function QuoteCard({ entry, timestamp }: QuoteCardProps) {
       >
         {entry.description}
       </p>
-
-      {!revealed && (
-        <p className="mt-3 text-sm text-violet-500 dark:text-violet-400">
-          Click to reveal
-        </p>
-      )}
     </article>
   );
 }

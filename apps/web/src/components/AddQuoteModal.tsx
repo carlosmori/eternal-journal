@@ -31,9 +31,11 @@ export function AddQuoteModal({ isOpen, onClose, onSuccess, encryptionKey }: Add
 
   const [txHash, setTxHash] = useState<`0x${string}` | undefined>();
   const { isSuccess: txConfirmed } = useWaitForTransactionReceipt({ hash: txHash });
+  const hasCalledSuccessRef = useRef(false);
 
   useEffect(() => {
-    if (txConfirmed) {
+    if (txConfirmed && !hasCalledSuccessRef.current) {
+      hasCalledSuccessRef.current = true;
       setLoading(false);
       onSuccess();
     }
@@ -47,6 +49,7 @@ export function AddQuoteModal({ isOpen, onClose, onSuccess, encryptionKey }: Add
       setDescription('');
       setMessage('');
       setTxHash(undefined);
+      hasCalledSuccessRef.current = false;
       setTimeout(() => titleRef.current?.focus(), 100);
     }
   }, [isOpen]);
