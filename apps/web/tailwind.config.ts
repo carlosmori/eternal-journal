@@ -9,6 +9,9 @@ const config: Config = {
   darkMode: 'class',
   theme: {
     extend: {
+      fontFamily: {
+        sans: ['var(--font-jakarta)', 'system-ui', '-apple-system', 'sans-serif'],
+      },
       colors: {
         violet: {
           50: '#f5f3ff',
@@ -26,6 +29,25 @@ const config: Config = {
       },
       backdropBlur: {
         xs: '2px',
+      },
+      keyframes: {
+        'fade-in-up': {
+          '0%': { opacity: '0', transform: 'translateY(12px)' },
+          '100%': { opacity: '1', transform: 'translateY(0)' },
+        },
+        'float': {
+          '0%, 100%': { transform: 'translateY(0)' },
+          '50%': { transform: 'translateY(-6px)' },
+        },
+        'glow-pulse': {
+          '0%, 100%': { boxShadow: '0 0 20px rgba(139, 92, 246, 0.15)' },
+          '50%': { boxShadow: '0 0 40px rgba(139, 92, 246, 0.3)' },
+        },
+      },
+      animation: {
+        'fade-in-up': 'fade-in-up 0.5s ease-out',
+        'float': 'float 3s ease-in-out infinite',
+        'glow-pulse': 'glow-pulse 3s ease-in-out infinite',
       },
     },
   },

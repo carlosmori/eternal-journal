@@ -1,13 +1,20 @@
 import type { Metadata } from 'next';
 import Script from 'next/script';
 import { cookies } from 'next/headers';
+import { Plus_Jakarta_Sans } from 'next/font/google';
 import { ThemeProvider } from '@/components/ThemeProvider';
 import { Web3Provider } from '@/components/Web3Provider';
 import './globals.css';
 
+const jakarta = Plus_Jakarta_Sans({
+  subsets: ['latin'],
+  variable: '--font-jakarta',
+  display: 'swap',
+});
+
 export const metadata: Metadata = {
   title: 'Eternal Journal',
-  description: 'Your journal lasts forever',
+  description: 'A place for your thoughts to live forever. Private, encrypted, and built with care.',
 };
 
 export default async function RootLayout({
@@ -24,8 +31,12 @@ export default async function RootLayout({
   const htmlClass = isDark === true ? 'dark' : isDark === false ? '' : '';
 
   return (
-    <html lang="en" className={htmlClass} suppressHydrationWarning>
-      <body className="antialiased">
+    <html
+      lang="en"
+      className={`${jakarta.variable} ${htmlClass}`}
+      suppressHydrationWarning
+    >
+      <body className="font-sans antialiased">
         <Script
           id="theme-init"
           strategy="beforeInteractive"

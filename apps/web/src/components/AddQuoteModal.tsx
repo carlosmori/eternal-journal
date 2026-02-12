@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { motion } from 'framer-motion';
 import { useWriteContract, useReadContract, useWaitForTransactionReceipt } from 'wagmi';
 import { bytesToHex, formatEther } from 'viem';
 import { encryptEntry, estimateBytes, MAX_ENTRY_BYTES, type JournalEntry } from '@/lib/crypto';
@@ -50,7 +51,7 @@ export function AddQuoteModal({ isOpen, onClose, onSuccess, encryptionKey }: Add
       setMessage('');
       setTxHash(undefined);
       hasCalledSuccessRef.current = false;
-      setTimeout(() => titleRef.current?.focus(), 100);
+      setTimeout(() => titleRef.current?.focus(), 200);
     }
   }, [isOpen]);
 
@@ -131,42 +132,50 @@ export function AddQuoteModal({ isOpen, onClose, onSuccess, encryptionKey }: Add
   if (!isOpen) return null;
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/30 backdrop-blur-md"
       onClick={onClose}
     >
-      <div
-        className="glass-card w-full max-w-md p-6"
-        onClick={(e) => e.stopPropagation()}
+      <motion.div
+        initial={{ scale: 0.95, opacity: 0, y: 10 }}
+        animate={{ scale: 1, opacity: 1, y: 0 }}
+        transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+        className="liquid-glass w-full max-w-md p-6"
+        onClick={(e: React.MouseEvent) => e.stopPropagation()}
       >
         <div className="flex justify-between items-center mb-4">
           <h3 className="text-xl font-semibold text-violet-900 dark:text-white">
-            New entry
+            Capture this moment
           </h3>
           <button
             onClick={onClose}
-            className="w-8 h-8 rounded-lg flex items-center justify-center text-violet-600 dark:text-violet-400 hover:bg-violet-100 dark:hover:bg-violet-800/50 transition-colors"
+            className="w-8 h-8 rounded-lg flex items-center justify-center text-violet-500 dark:text-violet-400 hover:bg-violet-200/30 dark:hover:bg-violet-800/30 transition-colors"
             aria-label="Close"
           >
-            &times;
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M18 6L6 18" />
+              <path d="M6 6l12 12" />
+            </svg>
           </button>
         </div>
 
         <div className="space-y-3">
           <div>
-            <label className="block text-sm font-medium text-violet-700 dark:text-violet-300 mb-1">
+            <label className="block text-sm font-medium text-violet-800 dark:text-violet-200 mb-1">
               Date
             </label>
             <input
               type="date"
               value={date}
               onChange={(e) => setDate(e.target.value)}
-              className="w-full px-4 py-2.5 rounded-xl border border-violet-200 dark:border-violet-800 bg-white/50 dark:bg-violet-900/30 text-violet-900 dark:text-violet-100 focus:outline-none focus:ring-2 focus:ring-violet-500/50"
+              className="glass-input"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-violet-700 dark:text-violet-300 mb-1">
+            <label className="block text-sm font-medium text-violet-800 dark:text-violet-200 mb-1">
               Title
             </label>
             <input
@@ -174,26 +183,26 @@ export function AddQuoteModal({ isOpen, onClose, onSuccess, encryptionKey }: Add
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="Entry title..."
-              className="w-full px-4 py-2.5 rounded-xl border border-violet-200 dark:border-violet-800 bg-white/50 dark:bg-violet-900/30 text-violet-900 dark:text-violet-100 placeholder-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-500/50"
+              placeholder="What's on your mind?"
+              className="glass-input"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-violet-700 dark:text-violet-300 mb-1">
+            <label className="block text-sm font-medium text-violet-800 dark:text-violet-200 mb-1">
               Description
             </label>
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="Write the entry description..."
+              placeholder="Write from the heart..."
               rows={4}
-              className="w-full px-4 py-3 rounded-xl border border-violet-200 dark:border-violet-800 bg-white/50 dark:bg-violet-900/30 text-violet-900 dark:text-violet-100 placeholder-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-500/50 resize-none"
+              className="glass-input resize-none"
             />
           </div>
         </div>
 
-        <div className="mt-3 flex justify-between text-xs text-violet-500 dark:text-violet-400">
+        <div className="mt-3 flex justify-between text-xs text-violet-600 dark:text-violet-300">
           <span className={isOverLimit ? 'text-red-500 dark:text-red-400 font-medium' : ''}>
             {byteEstimate > 0 ? `~${byteEstimate} / ${MAX_ENTRY_BYTES} bytes` : ''}
           </span>
@@ -203,7 +212,7 @@ export function AddQuoteModal({ isOpen, onClose, onSuccess, encryptionKey }: Add
         </div>
 
         {message && (
-          <p className={`mt-2 text-sm ${message.includes('sent') ? 'text-violet-500 dark:text-violet-400' : 'text-red-500 dark:text-red-400'}`}>
+          <p className={`mt-2 text-sm ${message.includes('sent') ? 'text-violet-600 dark:text-violet-300' : 'text-red-500 dark:text-red-400'}`}>
             {message}
           </p>
         )}
@@ -211,19 +220,21 @@ export function AddQuoteModal({ isOpen, onClose, onSuccess, encryptionKey }: Add
         <div className="flex gap-3 mt-4">
           <button
             onClick={onClose}
-            className="flex-1 py-2.5 rounded-xl bg-violet-200/50 dark:bg-violet-800/50 text-violet-700 dark:text-violet-300 font-medium hover:bg-violet-200/70 dark:hover:bg-violet-800/70 transition-colors"
+            className="flex-1 py-2.5 rounded-xl bg-violet-200/30 dark:bg-violet-800/30 text-violet-800 dark:text-violet-100 font-medium hover:bg-violet-200/50 dark:hover:bg-violet-800/50 transition-colors"
           >
             Cancel
           </button>
-          <button
+          <motion.button
+            whileHover={{ scale: 1.01 }}
+            whileTap={{ scale: 0.98 }}
             onClick={handleSubmit}
             disabled={loading || isOverLimit || !encryptionKey}
-            className="flex-1 py-2.5 rounded-xl bg-violet-600 hover:bg-violet-500 disabled:opacity-50 text-white font-medium transition-colors"
+            className="flex-1 py-2.5 glass-button disabled:opacity-50"
           >
-            {loading ? 'Saving...' : 'Save to blockchain'}
-          </button>
+            {loading ? 'Saving...' : 'Save forever'}
+          </motion.button>
         </div>
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 }
