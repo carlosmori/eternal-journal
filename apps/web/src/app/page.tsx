@@ -8,7 +8,7 @@ import { ConnectButton } from '@rainbow-me/rainbowkit';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { Tutorial } from '@/components/Tutorial';
 
-const DiaryScene = dynamic(() => import('@/components/DiaryScene'), {
+const UniverseScene = dynamic(() => import('@/components/UniverseScene'), {
   ssr: false,
 });
 
@@ -38,7 +38,7 @@ export default function HomePage() {
 
   const handleOpenComplete = useCallback(() => {
     setShowOverlay(true);
-    setTimeout(() => router.push('/journal'), 600);
+    setTimeout(() => router.push('/journal'), 400);
   }, [router]);
 
   return (
@@ -59,67 +59,140 @@ export default function HomePage() {
         <ThemeToggle />
       </div>
 
-      {/* 3D book scene (full viewport background) */}
+      {/* 3D scene: universe + sparkles + hex grid */}
       <div className="absolute inset-0 z-0">
-        {mounted && (
-          <DiaryScene isOpening={isOpening} onOpenComplete={handleOpenComplete} />
-        )}
+        {mounted && <UniverseScene isOpening={isOpening} variant="home" />}
       </div>
+      {/* Gradient overlay for blend with page */}
+      <div
+        className="absolute inset-0 z-[1] pointer-events-none dark:hidden"
+        style={{
+          background: `
+            radial-gradient(ellipse 80% 50% at 50% 30%, transparent 0%, rgba(255,255,255,0.4) 70%),
+            radial-gradient(ellipse 60% 40% at 80% 80%, transparent 0%, rgba(248,250,252,0.3) 60%)
+          `,
+        }}
+      />
+      <div
+        className="absolute inset-0 z-[1] pointer-events-none hidden dark:block"
+        style={{
+          background: `
+            radial-gradient(ellipse 80% 50% at 50% 30%, transparent 0%, rgba(15,5,32,0.6) 70%),
+            radial-gradient(ellipse 60% 40% at 80% 80%, transparent 0%, rgba(21,10,48,0.5) 60%)
+          `,
+        }}
+      />
 
-      {/* Hero content -- anchored at bottom-center */}
-      <div className="relative z-10 min-h-screen flex flex-col items-center justify-end pb-14 md:pb-24 px-4">
+      {/* Hero content - single card with flip + reveal */}
+      <div className="relative z-10 min-h-screen flex flex-col items-center justify-end pb-14 md:pb-24 px-4 [perspective:1200px]">
+        <motion.div
+          initial={{ opacity: 0, y: 32 }}
+          animate={{
+            opacity: isOpening ? 0 : 1,
+            y: 0,
+            rotateY: isOpening ? -95 : 0,
+            scale: isOpening ? 0.9 : 1,
+          }}
+          transition={{
+            opacity: { duration: isOpening ? 0.5 : 0.8, delay: isOpening ? 0.2 : 0.2 },
+            y: { duration: 0.8, delay: 0.2, ease: [0.22, 1, 0.36, 1] },
+            rotateY: { duration: 0.85, ease: [0.32, 0.72, 0, 1] },
+            scale: { duration: 0.85, ease: [0.32, 0.72, 0, 1] },
+          }}
+          onAnimationComplete={() => {
+            if (isOpening) handleOpenComplete();
+          }}
+          className="liquid-glass p-8 md:p-12 text-center max-w-lg w-full shadow-2xl shadow-violet-900/10"
+          style={{ transformStyle: 'preserve-3d', transformOrigin: 'center bottom' }}
+        >
+          <div className="flex flex-col items-center">
+            <img
+              src="/logo.svg"
+              alt="Eternal Journal"
+              className="h-16 md:h-20 w-auto mx-auto mb-4"
+            />
+            <h1 className="text-4xl md:text-5xl font-bold text-violet-900 dark:text-white mb-3 tracking-tight">
+              Eternal Journal
+            </h1>
+
+            <p className="text-violet-700 dark:text-violet-200 text-base md:text-lg leading-relaxed mb-2">
+              Your thoughts deserve a place that lasts forever.
+            </p>
+            <p className="text-violet-600 dark:text-violet-300 text-sm mb-8">
+              Private. Encrypted. Built with care for what matters to you.
+            </p>
+
+                <motion.button
+                  onClick={handleEnter}
+                  whileHover={{ scale: 1.03, y: -2 }}
+                  whileTap={{ scale: 0.98 }}
+                  transition={{ type: 'spring', stiffness: 400, damping: 17 }}
+                  className="glass-button px-10 py-3.5 text-lg shadow-lg shadow-violet-500/20"
+                >
+                  Open your journal
+                </motion.button>
+
+                <div className="mt-8 flex flex-wrap justify-center gap-6 text-sm text-violet-600 dark:text-violet-400">
+                  <span className="flex items-center gap-2">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                      <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                    </svg>
+                    Private
+                  </span>
+                  <span className="flex items-center gap-2">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                    </svg>
+                    Encrypted
+                  </span>
+                  <span className="flex items-center gap-2">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <circle cx="12" cy="12" r="10" />
+                      <polyline points="12 6 12 12 16 14" />
+                    </svg>
+                    Forever
+                  </span>
+                </div>
+              </div>
+        </motion.div>
+
+        {/* Loading state - appears as card flips away */}
         <AnimatePresence>
-          {!isOpening && (
+          {isOpening && (
             <motion.div
-              key="hero"
-              initial={{ opacity: 0, y: 24 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -12, transition: { duration: 0.3 } }}
-              transition={{ duration: 0.8, delay: 0.15 }}
-              className="liquid-glass p-8 md:p-12 text-center max-w-lg w-full"
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.4, delay: 0.3 }}
+              className="absolute bottom-14 md:bottom-24 flex flex-col items-center"
             >
-              <img
-                src="/logo.svg"
-                alt="Eternal Journal"
-                className="h-16 md:h-20 w-auto mx-auto mb-4"
+              <motion.div
+                animate={{ rotate: 360 }}
+                transition={{ duration: 1.2, ease: 'linear', repeat: Infinity }}
+                className="w-10 h-10 rounded-full border-2 border-violet-400/60 border-t-violet-600 dark:border-violet-300/60 dark:border-t-violet-200"
               />
-              <h1 className="text-4xl md:text-5xl font-bold text-violet-900 dark:text-white mb-3 tracking-tight">
-                Eternal Journal
-              </h1>
-
-              <p className="text-violet-700 dark:text-violet-200 text-base md:text-lg leading-relaxed mb-2">
-                Your thoughts deserve a place that lasts forever.
+              <p className="mt-3 text-violet-600 dark:text-violet-400 text-sm font-medium">
+                Opening your journal...
               </p>
-              <p className="text-violet-600 dark:text-violet-300 text-sm mb-8">
-                Private. Encrypted. Built with care for what matters to you.
-              </p>
-
-              <motion.button
-                onClick={handleEnter}
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.97 }}
-                className="glass-button px-10 py-3.5 text-lg"
-              >
-                Open your journal
-              </motion.button>
             </motion.div>
           )}
         </AnimatePresence>
       </div>
 
-      {/* Transition overlay (fades in as the book opens) */}
+      {/* Transition overlay */}
       <AnimatePresence>
         {showOverlay && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.5 }}
-            className="fixed inset-0 z-40 bg-white/90 dark:bg-[#0f0520]/90 backdrop-blur-2xl"
+            className="fixed inset-0 z-40 bg-white/95 dark:bg-[#0f0520]/95 backdrop-blur-2xl"
           />
         )}
       </AnimatePresence>
 
-      {/* Tutorial overlay (first visit) */}
+      {/* Tutorial overlay */}
       <AnimatePresence>
         {showTutorial && mounted && (
           <Tutorial onComplete={handleTutorialComplete} />

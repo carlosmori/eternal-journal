@@ -142,7 +142,7 @@ export function AddQuoteModal({ isOpen, onClose, onSuccess, encryptionKey }: Add
         initial={{ scale: 0.95, opacity: 0, y: 10 }}
         animate={{ scale: 1, opacity: 1, y: 0 }}
         transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-        className="liquid-glass w-full max-w-md p-6"
+        className="liquid-glass w-full max-w-md p-6 border-2 border-violet-200/50 dark:border-violet-600/40 shadow-2xl shadow-violet-900/20"
         onClick={(e: React.MouseEvent) => e.stopPropagation()}
       >
         <div className="flex justify-between items-center mb-4">

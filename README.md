@@ -2,6 +2,8 @@
 
 Journal on the blockchain. MVP with Next.js, NestJS and TypeScript.
 
+**New to the project?** Read [docs/PROJECT-OVERVIEW.md](docs/PROJECT-OVERVIEW.md) for a quick understanding of the app, architecture, and tech stack.
+
 ## Structure
 
 ```
