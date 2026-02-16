@@ -10,13 +10,8 @@ import { SignInModal } from '@/components/SignInModal';
 import { DiaryContainer } from '@/components/DiaryContainer';
 import { WriteQuoteForm } from '@/components/WriteQuoteForm';
 import { CommunitySection } from '@/components/CommunitySection';
-import {
-  JournalListView,
-  JournalTimelineView,
-  type ViewMode,
-} from '@/components/JournalViews';
+import { JournalListView } from '@/components/JournalViews';
 import { JournalFilters } from '@/components/JournalFilters';
-import { JournalViewSwitcher } from '@/components/JournalViewSwitcher';
 import { useFavorites } from '@/hooks/useFavorites';
 import { useGuestEntries } from '@/hooks/useGuestEntries';
 import { useWeb2Journal } from '@/hooks/useWeb2Journal';
@@ -126,12 +121,10 @@ export default function JournalPage() {
     setPendingGuestMigration(false);
   }, []);
 
-  const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [searchQuery, setSearchQuery] = useState('');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
   const [favoritesOnly, setFavoritesOnly] = useState(false);
-  const [selectedDay, setSelectedDay] = useState<string | null>(null);
 
   const favoritesKey = useMemo(() => {
     return `merged-${web2User?.userId ?? 'g'}-${address ?? 'w'}`;
@@ -311,7 +304,6 @@ export default function JournalPage() {
   const editable = true;
   const canSaveForever = !!jwt;
 
-  const canAddEntry = activeSection === 'read';
 
   // -- Modal handlers --
   const handleModalSuccess = useCallback(() => {
@@ -369,11 +361,6 @@ export default function JournalPage() {
     },
     [],
   );
-
-  const openAddModal = useCallback(() => {
-    setEditingEntry(null);
-    setModalOpen(true);
-  }, []);
 
   const handleDelete = useCallback(
     (entryId: number | string) => {
@@ -514,12 +501,48 @@ export default function JournalPage() {
       />
 
       {/* Header */}
-      <header className="sticky top-0 z-20 backdrop-blur-2xl bg-white/50 dark:bg-violet-950/40 border-b-2 border-violet-200/60 dark:border-violet-700/40 shadow-sm">
-        <div className="max-w-4xl mx-auto px-3 sm:px-4 py-3 sm:py-4 flex justify-between items-center gap-2 min-w-0">
-          <a href="/" className="flex items-center gap-2 sm:gap-3 font-semibold text-violet-900 dark:text-white text-base sm:text-lg tracking-tight shrink-0 min-w-0">
-            <img src="/logo.svg" alt="Eternal Journal" className="h-8 sm:h-9 w-auto shrink-0" />
-            <span className="hidden sm:inline truncate">Eternal Journal</span>
+      <header className="sticky top-0 z-20 backdrop-blur-2xl bg-white/50 dark:bg-violet-950/40 border-b border-violet-200/60 dark:border-violet-700/40 shadow-sm">
+        <div className="max-w-4xl mx-auto px-3 sm:px-4 py-2.5 sm:py-3 flex items-center gap-3 min-w-0">
+          {/* Logo */}
+          <a href="/" className="flex items-center gap-2 font-semibold text-violet-900 dark:text-white text-base tracking-tight shrink-0">
+            <img src="/logo.svg" alt="Eternal Journal" className="h-7 sm:h-8 w-auto" />
+            <span className="hidden lg:inline text-sm">Eternal Journal</span>
           </a>
+
+          {/* Tabs - centered */}
+          <nav className="flex-1 flex justify-center">
+            <div className="flex items-center gap-0.5 rounded-xl bg-white/20 dark:bg-violet-800/20 p-1 border border-violet-200/30 dark:border-violet-700/20">
+              {([
+                { id: 'write' as JournalSection, label: 'Write', icon: 'M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z' },
+                { id: 'read' as JournalSection, label: 'My Journal', icon: 'M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2zM22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z', count: entries.length },
+                { id: 'community' as JournalSection, label: 'Whispers', icon: 'M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z' },
+              ]).map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveSection(tab.id)}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                    activeSection === tab.id
+                      ? 'bg-white/60 dark:bg-violet-700/60 text-violet-900 dark:text-white shadow-sm'
+                      : 'text-violet-600 dark:text-violet-400 hover:text-violet-800 dark:hover:text-violet-200'
+                  }`}
+                >
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
+                    <path d={tab.icon} />
+                  </svg>
+                  <span className="hidden sm:inline">{tab.label}</span>
+                  {'count' in tab && tab.count !== undefined && tab.count > 0 && (
+                    <span className={`text-[10px] tabular-nums leading-none px-1.5 py-0.5 rounded-full ${
+                      activeSection === tab.id
+                        ? 'bg-violet-200/60 dark:bg-violet-600/50 text-violet-700 dark:text-violet-200'
+                        : 'bg-violet-200/40 dark:bg-violet-700/30 text-violet-500 dark:text-violet-400'
+                    }`}>
+                      {tab.count}
+                    </span>
+                  )}
+                </button>
+              ))}
+            </div>
+          </nav>
 
           {/* User menu */}
           <div className="relative shrink-0">
@@ -550,7 +573,7 @@ export default function JournalPage() {
                     animate={{ opacity: 1, scale: 1, y: 0 }}
                     exit={{ opacity: 0, scale: 0.95, y: -4 }}
                     transition={{ duration: 0.15 }}
-                    className="absolute right-0 top-full mt-2 z-40 w-64 glass-card p-2 shadow-xl shadow-violet-900/10"
+                    className="absolute right-0 top-full mt-2 z-40 w-64 glass-menu p-2 shadow-xl shadow-violet-900/10"
                   >
                     {/* User info */}
                     {jwt && web2User ? (
@@ -627,33 +650,9 @@ export default function JournalPage() {
             </AnimatePresence>
           </div>
         </div>
-
-        {/* Section nav */}
-        <nav className="max-w-4xl mx-auto px-3 sm:px-4 flex gap-1 pb-2">
-          {([
-            { id: 'write' as JournalSection, label: 'Write', icon: 'M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z' },
-            { id: 'read' as JournalSection, label: `My Journal${entries.length > 0 ? ` (${entries.length})` : ''}`, icon: 'M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2zM22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z' },
-            { id: 'community' as JournalSection, label: 'Whispers', icon: 'M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z' },
-          ]).map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveSection(tab.id)}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                activeSection === tab.id
-                  ? 'bg-violet-200/60 dark:bg-violet-700/50 text-violet-900 dark:text-white'
-                  : 'text-violet-600 dark:text-violet-400 hover:bg-violet-100/40 dark:hover:bg-violet-800/30'
-              }`}
-            >
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d={tab.icon} />
-              </svg>
-              <span className="hidden xs:inline sm:inline">{tab.label}</span>
-            </button>
-          ))}
-        </nav>
       </header>
 
-      <div className={`relative z-10 max-w-4xl mx-auto px-3 sm:px-4 py-6 sm:py-8 ${activeSection === 'read' && entries.length > 0 ? 'pb-28 sm:pb-24' : ''}`}>
+      <div className="relative z-10 max-w-4xl mx-auto px-3 sm:px-4 py-6 sm:py-8">
         {/* Banners -- visible in all sections */}
         {!jwt && activeSection === 'write' && <GuestBanner onOpenSignIn={() => setSignInModalOpen(true)} />}
 
@@ -779,9 +778,9 @@ export default function JournalPage() {
 
             {!isLoading && entries.length > 0 && (
               <>
-                <div className="flex flex-col items-center gap-3 mb-4 max-w-lg mx-auto">
-                  <div className="w-full">
-                    <JournalFilters
+                <div className="mb-4">
+                  <JournalFilters
+                      onAddClick={() => setActiveSection('write')}
                       searchQuery={searchQuery}
                       onSearchChange={setSearchQuery}
                       dateFrom={dateFrom}
@@ -792,14 +791,6 @@ export default function JournalPage() {
                       onFavoritesOnlyChange={setFavoritesOnly}
                       favoriteCount={favoriteCountOnPage}
                     />
-                  </div>
-                  <JournalViewSwitcher
-                    viewMode={viewMode}
-                    onViewModeChange={(v) => {
-                      setViewMode(v);
-                      if (v !== 'calendar') setSelectedDay(null);
-                    }}
-                  />
                 </div>
 
                 {filteredEntries.length === 0 ? (
@@ -810,44 +801,21 @@ export default function JournalPage() {
                   </DiaryContainer>
                 ) : (
                   <DiaryContainer entryCount={filteredEntries.length}>
-                    {viewMode === 'list' && (
-                      <JournalListView
-                        entries={filteredEntries}
-                        isFavorite={wrappedIsFavorite}
-                        onToggleFavorite={wrappedToggleFavorite}
-                        viewMode="list"
-                        onDaySelect={setSelectedDay}
-                        selectedDay={selectedDay}
-                        editable={editable}
-                        onEdit={handleEdit}
-                        canDelete={editable}
-                        onDelete={handleDelete}
-                        canSaveForever={canSaveForever}
-                        onSaveForever={handleSaveForever}
-                        isSharedWithCommunity={jwt ? wrappedIsSharedWithCommunity : undefined}
-                        onShareToCommunity={jwt ? handleShareToCommunity : undefined}
-                        onUnshareCommunity={jwt ? handleUnshareCommunity : undefined}
-                      />
-                    )}
-                    {viewMode === 'timeline' && (
-                      <JournalTimelineView
-                        entries={filteredEntries}
-                        isFavorite={wrappedIsFavorite}
-                        onToggleFavorite={wrappedToggleFavorite}
-                        viewMode="timeline"
-                        onDaySelect={setSelectedDay}
-                        selectedDay={selectedDay}
-                        editable={editable}
-                        onEdit={handleEdit}
-                        canDelete={editable}
-                        onDelete={handleDelete}
-                        canSaveForever={canSaveForever}
-                        onSaveForever={handleSaveForever}
-                        isSharedWithCommunity={jwt ? wrappedIsSharedWithCommunity : undefined}
-                        onShareToCommunity={jwt ? handleShareToCommunity : undefined}
-                        onUnshareCommunity={jwt ? handleUnshareCommunity : undefined}
-                      />
-                    )}
+                    <JournalListView
+                      entries={filteredEntries}
+                      isFavorite={wrappedIsFavorite}
+                      onToggleFavorite={wrappedToggleFavorite}
+                      viewMode="list"
+                      editable={editable}
+                      onEdit={handleEdit}
+                      canDelete={editable}
+                      onDelete={handleDelete}
+                      canSaveForever={canSaveForever}
+                      onSaveForever={handleSaveForever}
+                      isSharedWithCommunity={jwt ? wrappedIsSharedWithCommunity : undefined}
+                      onShareToCommunity={jwt ? handleShareToCommunity : undefined}
+                      onUnshareCommunity={jwt ? handleUnshareCommunity : undefined}
+                    />
                   </DiaryContainer>
                 )}
 
@@ -893,24 +861,6 @@ export default function JournalPage() {
         )}
 
       </div>
-
-      {/* FAB - Add entry (only in Read section) */}
-      {canAddEntry && entries.length > 0 && (
-        <motion.button
-          initial={{ opacity: 0, scale: 0.8 }}
-          animate={{ opacity: 1, scale: 1 }}
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
-          onClick={openAddModal}
-          className="fixed z-20 w-12 h-12 sm:w-14 sm:h-14 rounded-xl sm:rounded-2xl glass-button flex items-center justify-center shadow-lg bottom-[max(1rem,env(safe-area-inset-bottom))] right-[max(1rem,env(safe-area-inset-right))]"
-          aria-label="Add entry"
-        >
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M12 5v14" />
-            <path d="M5 12h14" />
-          </svg>
-        </motion.button>
-      )}
 
       <AddQuoteModal
         isOpen={modalOpen}

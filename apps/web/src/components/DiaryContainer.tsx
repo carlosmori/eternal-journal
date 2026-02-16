@@ -18,7 +18,7 @@ export function DiaryContainer({ children, entryCount }: DiaryContainerProps) {
         <div className="px-4 sm:px-5 pt-3 sm:pt-4 pb-2 sm:pb-3 border-b border-violet-200/30 dark:border-violet-700/20">
           <div className="flex items-center justify-between">
             <h2 className="text-sm font-semibold text-violet-800 dark:text-violet-200 uppercase tracking-wider">
-              Journal
+              My Journal
             </h2>
             {entryCount !== undefined && entryCount > 0 && (
               <span className="text-xs text-violet-500 dark:text-violet-400 font-mono">

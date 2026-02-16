@@ -13,6 +13,7 @@ interface JournalFiltersProps {
   favoritesOnly: boolean;
   onFavoritesOnlyChange: (v: boolean) => void;
   favoriteCount: number;
+  onAddClick?: () => void;
 }
 
 function getThisWeek(): { from: string; to: string } {
@@ -52,6 +53,7 @@ export function JournalFilters({
   favoritesOnly,
   onFavoritesOnlyChange,
   favoriteCount,
+  onAddClick,
 }: JournalFiltersProps) {
   const [expanded, setExpanded] = useState(false);
   const hasDateFilter = dateFrom || dateTo;
@@ -135,6 +137,21 @@ export function JournalFilters({
             <span className="w-1.5 h-1.5 rounded-full bg-violet-500 dark:bg-violet-400" />
           )}
         </button>
+
+        {/* Add quote (+) */}
+        {onAddClick && (
+          <button
+            onClick={onAddClick}
+            className="flex items-center justify-center w-9 h-9 rounded-xl text-sm font-semibold text-white bg-emerald-500/90 dark:bg-emerald-500/80 hover:bg-emerald-600 dark:hover:bg-emerald-600/90 border border-emerald-400/40 dark:border-emerald-400/30 shadow-sm shrink-0 transition-colors"
+            title="Add entry"
+            aria-label="Add entry"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 5v14" />
+              <path d="M5 12h14" />
+            </svg>
+          </button>
+        )}
       </div>
 
       {/* Expanded panel */}
