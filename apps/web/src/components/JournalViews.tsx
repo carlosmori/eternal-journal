@@ -20,6 +20,12 @@ interface JournalViewsProps {
   viewMode: ViewMode;
   onDaySelect?: (date: string) => void;
   selectedDay?: string | null;
+  editable?: boolean;
+  onEdit?: (entryIndex: number, entry: JournalEntry) => void;
+  canDelete?: boolean;
+  onDelete?: (entryIndex: number) => void;
+  canSaveForever?: boolean;
+  onSaveForever?: (entryIndex: number, entry: JournalEntry) => void;
 }
 
 const staggerContainer = {
@@ -38,12 +44,24 @@ function EntryCard({
   isFavorite,
   onToggleFavorite,
   compact,
+  editable,
+  onEdit,
+  canDelete,
+  onDelete,
+  canSaveForever,
+  onSaveForever,
 }: {
   item: DecryptedEntry;
   revealed: boolean;
   isFavorite: (i: number) => boolean;
   onToggleFavorite: (i: number) => void;
   compact?: boolean;
+  editable?: boolean;
+  onEdit?: (entryIndex: number, entry: JournalEntry) => void;
+  canDelete?: boolean;
+  onDelete?: (entryIndex: number) => void;
+  canSaveForever?: boolean;
+  onSaveForever?: (entryIndex: number, entry: JournalEntry) => void;
 }) {
   return (
     <QuoteCard
@@ -54,11 +72,17 @@ function EntryCard({
       isFavorite={isFavorite(item.entryIndex)}
       onToggleFavorite={onToggleFavorite}
       compact={compact}
+      editable={editable}
+      onEdit={onEdit}
+      canDelete={canDelete}
+      onDelete={onDelete}
+      canSaveForever={canSaveForever}
+      onSaveForever={onSaveForever}
     />
   );
 }
 
-export function JournalListView({ entries, revealed, isFavorite, onToggleFavorite }: JournalViewsProps) {
+export function JournalListView({ entries, revealed, isFavorite, onToggleFavorite, editable, onEdit, canDelete, onDelete, canSaveForever, onSaveForever }: JournalViewsProps) {
   return (
     <motion.div
       className="space-y-4"
@@ -73,6 +97,12 @@ export function JournalListView({ entries, revealed, isFavorite, onToggleFavorit
             revealed={revealed}
             isFavorite={isFavorite}
             onToggleFavorite={onToggleFavorite}
+            editable={editable}
+            onEdit={onEdit}
+            canDelete={canDelete}
+            onDelete={onDelete}
+            canSaveForever={canSaveForever}
+            onSaveForever={onSaveForever}
           />
         </motion.div>
       ))}
@@ -80,7 +110,7 @@ export function JournalListView({ entries, revealed, isFavorite, onToggleFavorit
   );
 }
 
-export function JournalTimelineView({ entries, revealed, isFavorite, onToggleFavorite }: JournalViewsProps) {
+export function JournalTimelineView({ entries, revealed, isFavorite, onToggleFavorite, editable, onEdit, canDelete, onDelete, canSaveForever, onSaveForever }: JournalViewsProps) {
   return (
     <motion.div
       className="relative"
@@ -102,6 +132,12 @@ export function JournalTimelineView({ entries, revealed, isFavorite, onToggleFav
                 revealed={revealed}
                 isFavorite={isFavorite}
                 onToggleFavorite={onToggleFavorite}
+                editable={editable}
+                onEdit={onEdit}
+                canDelete={canDelete}
+                onDelete={onDelete}
+                canSaveForever={canSaveForever}
+                onSaveForever={onSaveForever}
               />
             </div>
           </motion.div>
@@ -111,7 +147,7 @@ export function JournalTimelineView({ entries, revealed, isFavorite, onToggleFav
   );
 }
 
-export function JournalGridView({ entries, revealed, isFavorite, onToggleFavorite }: JournalViewsProps) {
+export function JournalGridView({ entries, revealed, isFavorite, onToggleFavorite, editable, onEdit, canDelete, onDelete, canSaveForever, onSaveForever }: JournalViewsProps) {
   return (
     <motion.div
       className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"
@@ -127,6 +163,12 @@ export function JournalGridView({ entries, revealed, isFavorite, onToggleFavorit
             isFavorite={isFavorite}
             onToggleFavorite={onToggleFavorite}
             compact
+            editable={editable}
+            onEdit={onEdit}
+            canDelete={canDelete}
+            onDelete={onDelete}
+            canSaveForever={canSaveForever}
+            onSaveForever={onSaveForever}
           />
         </motion.div>
       ))}
@@ -158,6 +200,12 @@ export function JournalCalendarView({
   onToggleFavorite,
   onDaySelect,
   selectedDay,
+  editable,
+  onEdit,
+  canDelete,
+  onDelete,
+  canSaveForever,
+  onSaveForever,
 }: JournalViewsProps) {
   const now = new Date();
   const [year, month] = [now.getFullYear(), now.getMonth()];
@@ -227,6 +275,12 @@ export function JournalCalendarView({
               revealed={revealed}
               isFavorite={isFavorite}
               onToggleFavorite={onToggleFavorite}
+              editable={editable}
+              onEdit={onEdit}
+              canDelete={canDelete}
+              onDelete={onDelete}
+              canSaveForever={canSaveForever}
+              onSaveForever={onSaveForever}
             />
           ))}
         </motion.div>

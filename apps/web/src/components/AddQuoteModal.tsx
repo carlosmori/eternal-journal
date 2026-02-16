@@ -6,15 +6,40 @@ import { useWriteContract, useReadContract, useWaitForTransactionReceipt } from 
 import { bytesToHex, formatEther } from 'viem';
 import { encryptEntry, estimateBytes, MAX_ENTRY_BYTES, type JournalEntry } from '@/lib/crypto';
 import { ETERNAL_JOURNAL_ABI, ETERNAL_JOURNAL_ADDRESS } from '@/lib/contract';
+import type { AuthMode } from '@/lib/auth';
+
+export interface EditingEntry {
+  id: number;
+  date: string;
+  title: string;
+  description: string;
+}
 
 interface AddQuoteModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: () => void;
-  encryptionKey: Uint8Array | null;
+  mode: AuthMode;
+  encryptionKey?: Uint8Array | null;
+  editEntry?: EditingEntry | null;
+  onGuestAdd?: (data: { date: string; title: string; description: string }) => void;
+  onWeb2Add?: (data: { date: string; title: string; description: string }) => Promise<void>;
+  onGuestUpdate?: (id: number, data: { date: string; title: string; description: string }) => void;
+  onWeb2Update?: (id: number, data: { date: string; title: string; description: string }) => Promise<void>;
 }
 
-export function AddQuoteModal({ isOpen, onClose, onSuccess, encryptionKey }: AddQuoteModalProps) {
+export function AddQuoteModal({
+  isOpen,
+  onClose,
+  onSuccess,
+  mode,
+  encryptionKey,
+  editEntry,
+  onGuestAdd,
+  onWeb2Add,
+  onGuestUpdate,
+  onWeb2Update,
+}: AddQuoteModalProps) {
   const [date, setDate] = useState('');
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -22,14 +47,15 @@ export function AddQuoteModal({ isOpen, onClose, onSuccess, encryptionKey }: Add
   const [loading, setLoading] = useState(false);
   const titleRef = useRef<HTMLInputElement>(null);
 
-  const { writeContractAsync } = useWriteContract();
+  const isEditing = !!editEntry;
 
+  // Web3-only hooks
+  const { writeContractAsync } = useWriteContract();
   const { data: fee } = useReadContract({
     address: ETERNAL_JOURNAL_ADDRESS,
     abi: ETERNAL_JOURNAL_ABI,
     functionName: 'fee',
   });
-
   const [txHash, setTxHash] = useState<`0x${string}` | undefined>();
   const { isSuccess: txConfirmed } = useWaitForTransactionReceipt({ hash: txHash });
   const hasCalledSuccessRef = useRef(false);
@@ -44,16 +70,22 @@ export function AddQuoteModal({ isOpen, onClose, onSuccess, encryptionKey }: Add
 
   useEffect(() => {
     if (isOpen) {
-      const today = new Date().toISOString().split('T')[0];
-      setDate(today);
-      setTitle('');
-      setDescription('');
+      if (editEntry) {
+        setDate(editEntry.date);
+        setTitle(editEntry.title);
+        setDescription(editEntry.description);
+      } else {
+        const today = new Date().toISOString().split('T')[0];
+        setDate(today);
+        setTitle('');
+        setDescription('');
+      }
       setMessage('');
       setTxHash(undefined);
       hasCalledSuccessRef.current = false;
       setTimeout(() => titleRef.current?.focus(), 200);
     }
-  }, [isOpen]);
+  }, [isOpen, editEntry]);
 
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
@@ -70,8 +102,8 @@ export function AddQuoteModal({ isOpen, onClose, onSuccess, encryptionKey }: Add
   }, [isOpen, onClose]);
 
   const currentEntry: JournalEntry = { date, title, description };
-  const byteEstimate = title || description ? estimateBytes(currentEntry) : 0;
-  const isOverLimit = byteEstimate > MAX_ENTRY_BYTES;
+  const byteEstimate = mode === 'web3' && (title || description) ? estimateBytes(currentEntry) : 0;
+  const isOverLimit = mode === 'web3' && byteEstimate > MAX_ENTRY_BYTES;
 
   const handleSubmit = async () => {
     if (!title.trim()) {
@@ -82,29 +114,57 @@ export function AddQuoteModal({ isOpen, onClose, onSuccess, encryptionKey }: Add
       setMessage('Enter a description for the entry.');
       return;
     }
-    if (!encryptionKey) {
-      setMessage('Unlock the journal first.');
-      return;
-    }
-    if (isOverLimit) {
-      setMessage(`Entry exceeds the ${MAX_ENTRY_BYTES} byte limit.`);
-      return;
-    }
-    if (!fee) {
-      setMessage('Could not read contract fee.');
-      return;
-    }
+
+    const entryData = {
+      date,
+      title: title.trim(),
+      description: description.trim(),
+    };
 
     setLoading(true);
     setMessage('');
 
     try {
-      const entry: JournalEntry = {
-        date,
-        title: title.trim(),
-        description: description.trim(),
-      };
+      if (mode === 'guest') {
+        if (isEditing && editEntry) {
+          onGuestUpdate?.(editEntry.id, entryData);
+        } else {
+          onGuestAdd?.(entryData);
+        }
+        setLoading(false);
+        onSuccess();
+        return;
+      }
 
+      if (mode === 'web2') {
+        if (isEditing && editEntry) {
+          await onWeb2Update?.(editEntry.id, entryData);
+        } else {
+          await onWeb2Add?.(entryData);
+        }
+        setLoading(false);
+        onSuccess();
+        return;
+      }
+
+      // Web3 mode (no editing, only add)
+      if (!encryptionKey) {
+        setMessage('Unlock the journal first.');
+        setLoading(false);
+        return;
+      }
+      if (isOverLimit) {
+        setMessage(`Entry exceeds the ${MAX_ENTRY_BYTES} byte limit.`);
+        setLoading(false);
+        return;
+      }
+      if (!fee) {
+        setMessage('Could not read contract fee.');
+        setLoading(false);
+        return;
+      }
+
+      const entry: JournalEntry = entryData;
       const encrypted = encryptEntry(encryptionKey, entry);
       const encryptedHex = bytesToHex(encrypted);
 
@@ -129,6 +189,20 @@ export function AddQuoteModal({ isOpen, onClose, onSuccess, encryptionKey }: Add
     }
   };
 
+  const isSubmitDisabled =
+    loading ||
+    (mode === 'web3' && (isOverLimit || !encryptionKey));
+
+  const buttonLabel = loading
+    ? 'Saving...'
+    : isEditing
+      ? 'Update entry'
+      : mode === 'web3'
+        ? 'Save forever'
+        : mode === 'web2'
+          ? 'Save entry'
+          : 'Save locally';
+
   if (!isOpen) return null;
 
   return (
@@ -147,7 +221,7 @@ export function AddQuoteModal({ isOpen, onClose, onSuccess, encryptionKey }: Add
       >
         <div className="flex justify-between items-center mb-4">
           <h3 className="text-xl font-semibold text-violet-900 dark:text-white">
-            Capture this moment
+            {isEditing ? 'Edit entry' : 'Capture this moment'}
           </h3>
           <button
             onClick={onClose}
@@ -204,10 +278,15 @@ export function AddQuoteModal({ isOpen, onClose, onSuccess, encryptionKey }: Add
 
         <div className="mt-3 flex justify-between text-xs text-violet-600 dark:text-violet-300">
           <span className={isOverLimit ? 'text-red-500 dark:text-red-400 font-medium' : ''}>
-            {byteEstimate > 0 ? `~${byteEstimate} / ${MAX_ENTRY_BYTES} bytes` : ''}
+            {mode === 'web3' && byteEstimate > 0
+              ? `~${byteEstimate} / ${MAX_ENTRY_BYTES} bytes`
+              : ''}
           </span>
-          {fee && (
+          {mode === 'web3' && fee && (
             <span>Fee: {formatEther(fee)} ETH</span>
+          )}
+          {mode === 'guest' && !isEditing && (
+            <span className="text-amber-600 dark:text-amber-400">Saved on this device only</span>
           )}
         </div>
 
@@ -228,10 +307,10 @@ export function AddQuoteModal({ isOpen, onClose, onSuccess, encryptionKey }: Add
             whileHover={{ scale: 1.01 }}
             whileTap={{ scale: 0.98 }}
             onClick={handleSubmit}
-            disabled={loading || isOverLimit || !encryptionKey}
+            disabled={isSubmitDisabled}
             className="flex-1 py-2.5 glass-button disabled:opacity-50"
           >
-            {loading ? 'Saving...' : 'Save forever'}
+            {buttonLabel}
           </motion.button>
         </div>
       </motion.div>

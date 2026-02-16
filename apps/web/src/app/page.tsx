@@ -4,7 +4,6 @@ import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ConnectButton } from '@rainbow-me/rainbowkit';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { Tutorial } from '@/components/Tutorial';
 
@@ -55,7 +54,6 @@ export default function HomePage() {
 
       {/* Top controls */}
       <div className="fixed top-4 right-4 flex items-center gap-3 z-20">
-        <ConnectButton />
         <ThemeToggle />
       </div>
 

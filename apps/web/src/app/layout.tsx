@@ -4,6 +4,7 @@ import { cookies } from 'next/headers';
 import { Plus_Jakarta_Sans } from 'next/font/google';
 import { ThemeProvider } from '@/components/ThemeProvider';
 import { Web3Provider } from '@/components/Web3Provider';
+import { AuthProvider } from '@/contexts/AuthContext';
 import './globals.css';
 
 const jakarta = Plus_Jakarta_Sans({
@@ -52,9 +53,11 @@ export default async function RootLayout({
           }}
         />
         <Web3Provider>
-          <ThemeProvider initialTheme={themeCookie as 'dark' | 'light' | undefined}>
-            {children}
-          </ThemeProvider>
+          <AuthProvider>
+            <ThemeProvider initialTheme={themeCookie as 'dark' | 'light' | undefined}>
+              {children}
+            </ThemeProvider>
+          </AuthProvider>
         </Web3Provider>
       </body>
     </html>

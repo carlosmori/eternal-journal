@@ -3,7 +3,11 @@
 import dynamic from 'next/dynamic';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
 import { useTheme } from '@/components/ThemeProvider';
-import { AddQuoteModal } from '@/components/AddQuoteModal';
+import { AddQuoteModal, type EditingEntry } from '@/components/AddQuoteModal';
+import { SaveForeverModal } from '@/components/SaveForeverModal';
+import { GuestBanner } from '@/components/GuestBanner';
+import { SignInModal } from '@/components/SignInModal';
+import { DiaryContainer } from '@/components/DiaryContainer';
 import {
   JournalListView,
   JournalTimelineView,
@@ -14,6 +18,9 @@ import {
 import { JournalFilters } from '@/components/JournalFilters';
 import { JournalViewSwitcher } from '@/components/JournalViewSwitcher';
 import { useFavorites } from '@/hooks/useFavorites';
+import { useGuestEntries } from '@/hooks/useGuestEntries';
+import { useWeb2Journal } from '@/hooks/useWeb2Journal';
+import { useAuth } from '@/contexts/AuthContext';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useAccount, useSignMessage, useReadContract } from 'wagmi';
 import { hexToBytes } from 'viem';
@@ -36,17 +43,29 @@ interface DecryptedEntry {
 
 export default function JournalPage() {
   const { theme, toggleTheme } = useTheme();
+  const { authMode, web2User, logoutWeb2, setAuthMode } = useAuth();
   const { address, isConnected } = useAccount();
   const { signMessageAsync } = useSignMessage();
 
+  // -- Guest mode --
+  const guest = useGuestEntries();
+
+  // -- Web2 mode --
+  const web2 = useWeb2Journal();
+
+  // -- Web3 mode --
   const [encryptionKey, setEncryptionKey] = useState<Uint8Array | null>(null);
-  const [entries, setEntries] = useState<DecryptedEntry[]>([]);
+  const [web3Entries, setWeb3Entries] = useState<DecryptedEntry[]>([]);
   const [currentPage, setCurrentPage] = useState(0);
-  const [allRevealed, setAllRevealed] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+  const [web3Loading, setWeb3Loading] = useState(false);
   const [isUnlocking, setIsUnlocking] = useState(false);
+  const [web3Error, setWeb3Error] = useState('');
+
+  const [allRevealed, setAllRevealed] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
-  const [error, setError] = useState('');
+  const [signInModalOpen, setSignInModalOpen] = useState(false);
+  const [editingEntry, setEditingEntry] = useState<EditingEntry | null>(null);
+  const [saveForeverEntry, setSaveForeverEntry] = useState<{ id: number; entry: JournalEntry; sourceMode: 'guest' | 'web2' } | null>(null);
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => setMounted(true), []);
@@ -57,15 +76,22 @@ export default function JournalPage() {
   const [favoritesOnly, setFavoritesOnly] = useState(false);
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
 
-  const { isFavorite, toggleFavorite } = useFavorites(address);
+  const favoritesKey = useMemo(() => {
+    if (authMode === 'web3') return address;
+    if (authMode === 'web2') return web2User?.userId;
+    return 'guest';
+  }, [authMode, address, web2User]);
 
+  const { isFavorite, toggleFavorite } = useFavorites(favoritesKey);
+
+  // -- Web3 blockchain reading --
   const { data: entryCount, refetch: refetchCount } = useReadContract({
     address: ETERNAL_JOURNAL_ADDRESS,
     abi: ETERNAL_JOURNAL_ABI,
     functionName: 'getEntryCount',
     args: address ? [address] : undefined,
     query: {
-      enabled: !!address,
+      enabled: !!address && authMode === 'web3',
       refetchInterval: false,
     },
   });
@@ -75,7 +101,7 @@ export default function JournalPage() {
 
   const handleUnlock = async () => {
     setIsUnlocking(true);
-    setError('');
+    setWeb3Error('');
     try {
       const signature = await signMessageAsync({ message: SIGN_MESSAGE });
       const key = deriveKey(signature);
@@ -83,9 +109,9 @@ export default function JournalPage() {
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Error signing';
       if (msg.includes('User rejected') || msg.includes('user rejected')) {
-        setError('Signature cancelled by user.');
+        setWeb3Error('Signature cancelled by user.');
       } else {
-        setError('Error unlocking: ' + msg.slice(0, 100));
+        setWeb3Error('Error unlocking: ' + msg.slice(0, 100));
       }
     } finally {
       setIsUnlocking(false);
@@ -100,24 +126,19 @@ export default function JournalPage() {
         return;
 
       if (count === 0) {
-        setEntries([]);
+        setWeb3Entries([]);
         return;
       }
 
       const totalPages = Math.ceil(count / PAGE_SIZE);
       const safePage = Math.min(page, Math.max(0, totalPages - 1));
-
-      // Calculate the range for this page (newest first).
-      // Page 0 = newest entries, page N = oldest entries.
-      // getEntries(user, start, end) returns entries[start..end] inclusive, ascending.
       const pageEndIdx = count - 1 - safePage * PAGE_SIZE;
       const pageStartIdx = Math.max(0, pageEndIdx - PAGE_SIZE + 1);
 
-      setIsLoading(true);
-      setError('');
+      setWeb3Loading(true);
+      setWeb3Error('');
 
       try {
-        // Single batch call instead of N individual getEntry calls
         const results = await sepoliaPublicClient.readContract({
           address: ETERNAL_JOURNAL_ADDRESS,
           abi: ETERNAL_JOURNAL_ABI,
@@ -131,37 +152,31 @@ export default function JournalPage() {
         }[];
 
         const decrypted: DecryptedEntry[] = [];
-
-        // Results come in ascending order (start..end), reverse for newest-first display
         for (let i = batchResults.length - 1; i >= 0; i--) {
           const entryIndex = pageStartIdx + i;
           try {
             const { timestamp, ciphertext } = batchResults[i];
             const ciphertextBytes = hexToBytes(ciphertext);
             const entry = decryptEntry(encryptionKey, ciphertextBytes);
-            decrypted.push({
-              entry,
-              timestamp: Number(timestamp),
-              entryIndex,
-            });
+            decrypted.push({ entry, timestamp: Number(timestamp), entryIndex });
           } catch {
             console.warn('Could not decrypt an entry');
           }
         }
-
-        setEntries(decrypted);
+        setWeb3Entries(decrypted);
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : 'Unknown error';
-        setError('Error reading entries: ' + msg.slice(0, 100));
+        setWeb3Error('Error reading entries: ' + msg.slice(0, 100));
       } finally {
-        setIsLoading(false);
+        setWeb3Loading(false);
       }
     },
     [address, encryptionKey, entryCount],
   );
 
   useEffect(() => {
-    if (!encryptionKey || !address || entryCount === undefined || isLoading || manualRefreshRef.current) return;
+    if (authMode !== 'web3') return;
+    if (!encryptionKey || !address || entryCount === undefined || web3Loading || manualRefreshRef.current) return;
 
     const count = Number(entryCount);
     const totalPages = Math.ceil(count / PAGE_SIZE);
@@ -176,19 +191,20 @@ export default function JournalPage() {
     }
     lastFetchedRef.current = { address, count, page: safePage };
     fetchPage(safePage);
-  }, [encryptionKey, entryCount, address, fetchPage, currentPage, isLoading]);
+  }, [authMode, encryptionKey, entryCount, address, fetchPage, currentPage, web3Loading]);
 
   useEffect(() => {
     setEncryptionKey(null);
-    setEntries([]);
-    setError('');
+    setWeb3Entries([]);
+    setWeb3Error('');
     setCurrentPage(0);
     setAllRevealed(false);
     lastFetchedRef.current = null;
   }, [address]);
 
-  const handleQuoteAdded = useCallback(() => {
+  const handleWeb3QuoteAdded = useCallback(() => {
     setModalOpen(false);
+    setEditingEntry(null);
     lastFetchedRef.current = null;
     manualRefreshRef.current = true;
     const newCount = Number(entryCount ?? 0) + 1;
@@ -202,9 +218,136 @@ export default function JournalPage() {
     refetchCount();
   }, [address, entryCount, refetchCount, fetchPage]);
 
-  const totalCount = Number(entryCount ?? 0);
-  const totalPages = Math.ceil(totalCount / PAGE_SIZE);
+  // -- Unified entries for all modes --
+  const entries: DecryptedEntry[] = useMemo(() => {
+    if (authMode === 'guest') {
+      return guest.entries.map((e) => ({
+        entry: { date: e.date, title: e.title, description: e.description },
+        timestamp: e.timestamp,
+        entryIndex: e.id,
+      }));
+    }
+    if (authMode === 'web2') {
+      return web2.entries.map((e) => ({
+        entry: { date: e.date, title: e.title, description: e.description },
+        timestamp: e.timestamp,
+        entryIndex: e.id,
+      }));
+    }
+    return web3Entries;
+  }, [authMode, guest.entries, web2.entries, web3Entries]);
 
+  const isLoading = useMemo(() => {
+    if (authMode === 'guest') return guest.isLoading;
+    if (authMode === 'web2') return web2.isLoading;
+    return web3Loading;
+  }, [authMode, guest.isLoading, web2.isLoading, web3Loading]);
+
+  const error = useMemo(() => {
+    if (authMode === 'web2') return web2.error;
+    if (authMode === 'web3') return web3Error;
+    return '';
+  }, [authMode, web2.error, web3Error]);
+
+  const totalCount = useMemo(() => {
+    if (authMode === 'guest') return guest.totalCount;
+    if (authMode === 'web2') return web2.totalCount;
+    return Number(entryCount ?? 0);
+  }, [authMode, guest.totalCount, web2.totalCount, entryCount]);
+
+  const web3TotalPages = Math.ceil(Number(entryCount ?? 0) / PAGE_SIZE);
+  const revealed = authMode === 'web3' ? allRevealed : true;
+  const editable = authMode !== 'web3';
+
+  const canAddEntry =
+    authMode === 'guest' ||
+    (authMode === 'web2' && !!web2User) ||
+    (authMode === 'web3' && !!encryptionKey);
+
+  // -- Modal handlers --
+  const handleModalSuccess = useCallback(() => {
+    if (authMode === 'web3') {
+      handleWeb3QuoteAdded();
+    } else {
+      setModalOpen(false);
+      setEditingEntry(null);
+    }
+  }, [authMode, handleWeb3QuoteAdded]);
+
+  const handleGuestAdd = useCallback(
+    (data: { date: string; title: string; description: string }) => {
+      guest.addEntry(data);
+    },
+    [guest],
+  );
+
+  const handleWeb2Add = useCallback(
+    async (data: { date: string; title: string; description: string }) => {
+      await web2.addEntry(data);
+    },
+    [web2],
+  );
+
+  const handleGuestUpdate = useCallback(
+    (id: number, data: { date: string; title: string; description: string }) => {
+      guest.updateEntry(id, data);
+    },
+    [guest],
+  );
+
+  const handleWeb2Update = useCallback(
+    async (id: number, data: { date: string; title: string; description: string }) => {
+      await web2.updateEntry(id, data);
+    },
+    [web2],
+  );
+
+  const handleEdit = useCallback(
+    (entryIndex: number, entry: JournalEntry) => {
+      setEditingEntry({
+        id: entryIndex,
+        date: entry.date,
+        title: entry.title,
+        description: entry.description,
+      });
+      setModalOpen(true);
+    },
+    [],
+  );
+
+  const openAddModal = useCallback(() => {
+    setEditingEntry(null);
+    setModalOpen(true);
+  }, []);
+
+  const handleDelete = useCallback(
+    (entryIndex: number) => {
+      if (!confirm('Delete this entry? This cannot be undone.')) return;
+      if (authMode === 'guest') {
+        guest.removeEntry(entryIndex);
+      } else if (authMode === 'web2') {
+        web2.deleteEntry(entryIndex);
+      }
+    },
+    [authMode, guest, web2],
+  );
+
+  const handleSaveForever = useCallback((entryIndex: number, entry: JournalEntry) => {
+    setSaveForeverEntry({ id: entryIndex, entry, sourceMode: authMode === 'web2' ? 'web2' : 'guest' });
+  }, [authMode]);
+
+  const handleSaveForeverSuccess = useCallback(() => {
+    if (!saveForeverEntry) return;
+    if (saveForeverEntry.sourceMode === 'guest') {
+      guest.removeEntry(saveForeverEntry.id);
+    } else {
+      web2.deleteEntry(saveForeverEntry.id);
+    }
+    setSaveForeverEntry(null);
+    refetchCount();
+  }, [saveForeverEntry, guest, web2, refetchCount]);
+
+  // -- Filters --
   const filteredEntries = useMemo(() => {
     return entries.filter((item) => {
       const q = searchQuery.trim().toLowerCase();
@@ -229,13 +372,16 @@ export default function JournalPage() {
     [entries, isFavorite],
   );
 
+  const showWeb3Connect = authMode === 'web3' && !isConnected;
+  const showWeb3Unlock = authMode === 'web3' && isConnected && !encryptionKey;
+  const showEntries = !showWeb3Connect && !showWeb3Unlock;
+
   return (
     <main className="min-h-screen bg-gradient-to-br from-violet-100 via-fuchsia-50 to-violet-200 dark:from-[#0f0520] dark:via-[#150a30] dark:to-[#1a0535] transition-colors relative overflow-hidden">
       {/* 3D universe background */}
       <div className="fixed inset-0 z-0">
         {mounted && <UniverseScene variant="journal" />}
       </div>
-      {/* Gradient overlay for content readability */}
       <div
         className="fixed inset-0 z-[1] pointer-events-none dark:hidden"
         style={{
@@ -249,56 +395,71 @@ export default function JournalPage() {
         }}
       />
 
-      {/* Header */}
+      {/* Header - simplified */}
       <header className="sticky top-0 z-20 backdrop-blur-2xl bg-white/50 dark:bg-violet-950/40 border-b-2 border-violet-200/60 dark:border-violet-700/40 shadow-sm">
         <div className="max-w-4xl mx-auto px-4 py-4 flex justify-between items-center">
           <a href="/" className="flex items-center gap-3 font-semibold text-violet-900 dark:text-white text-lg tracking-tight">
             <img src="/logo.svg" alt="Eternal Journal" className="h-9 w-auto" />
             Eternal Journal
           </a>
-          <div className="flex items-center gap-3">
-            <ConnectButton />
+          <div className="flex items-center gap-2">
+            {/* Auth area: unified */}
+            {authMode === 'guest' && (
+              <button
+                onClick={() => setSignInModalOpen(true)}
+                className="px-3 py-2 rounded-xl text-sm font-medium text-violet-700 dark:text-violet-300 bg-white/40 dark:bg-violet-800/30 border border-violet-200/40 dark:border-violet-600/30 hover:bg-white/60 dark:hover:bg-violet-700/40 transition-colors"
+              >
+                Sign in
+              </button>
+            )}
+            {authMode === 'web2' && web2User && (
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-full bg-violet-200/60 dark:bg-violet-700/40 flex items-center justify-center text-xs font-bold text-violet-700 dark:text-violet-300 uppercase">
+                  {(web2User.name || web2User.email || '?')[0]}
+                </div>
+                <button
+                  onClick={logoutWeb2}
+                  className="text-xs text-violet-500 dark:text-violet-400 hover:text-violet-700 dark:hover:text-violet-200 transition-colors"
+                >
+                  Sign out
+                </button>
+              </div>
+            )}
+            {authMode === 'web3' && <ConnectButton />}
+
             <button
               onClick={toggleTheme}
-              className="w-10 h-10 rounded-xl bg-white/40 dark:bg-violet-800/30 backdrop-blur-sm flex items-center justify-center text-violet-700 dark:text-violet-200 hover:bg-white/60 dark:hover:bg-violet-700/40 transition-colors"
+              className="w-9 h-9 rounded-xl bg-white/40 dark:bg-violet-800/30 backdrop-blur-sm flex items-center justify-center text-violet-700 dark:text-violet-200 hover:bg-white/60 dark:hover:bg-violet-700/40 transition-colors"
               aria-label={theme === 'dark' ? 'Light mode' : 'Dark mode'}
             >
               {theme === 'dark' ? '\u2600\uFE0F' : '\uD83C\uDF19'}
             </button>
-            {encryptionKey && (
+            {canAddEntry && (
               <motion.button
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.97 }}
-                onClick={() => setModalOpen(true)}
-                className="px-4 py-2 glass-button text-sm"
+                onClick={openAddModal}
+                className="w-9 h-9 rounded-xl glass-button flex items-center justify-center"
+                aria-label="Add entry"
               >
-                Add entry
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 5v14" />
+                  <path d="M5 12h14" />
+                </svg>
               </motion.button>
             )}
           </div>
         </div>
       </header>
 
-      <div className={`relative z-10 max-w-4xl mx-auto px-4 py-8 ${isConnected && encryptionKey && entries.length > 0 ? 'pb-24' : ''}`}>
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-          <h2 className="text-xl font-semibold text-violet-900 dark:text-violet-100">
-            Your entries
-          </h2>
-          {entries.length > 0 && (
-            <JournalViewSwitcher
-              viewMode={viewMode}
-              onViewModeChange={(v) => {
-                setViewMode(v);
-                if (v !== 'calendar') setSelectedDay(null);
-              }}
-            />
-          )}
-        </div>
+      <div className={`relative z-10 max-w-4xl mx-auto px-4 py-8 ${showEntries && entries.length > 0 ? 'pb-24' : ''}`}>
+        {/* Guest banner */}
+        {authMode === 'guest' && <GuestBanner onOpenSignIn={() => setSignInModalOpen(true)} />}
 
-        {/* State: Not connected */}
-        {!isConnected && (
+        {/* Web3: Not connected */}
+        {showWeb3Connect && (
           <motion.div
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
@@ -314,14 +475,20 @@ export default function JournalPage() {
             <h3 className="text-xl font-semibold text-violet-900 dark:text-violet-100 mb-2">
               Your journal awaits
             </h3>
-            <p className="text-violet-700 dark:text-violet-300 leading-relaxed max-w-sm mx-auto">
-              Connect your wallet above to open your private journal. MetaMask, WalletConnect, or any compatible wallet works.
+            <p className="text-violet-700 dark:text-violet-300 leading-relaxed max-w-sm mx-auto mb-4">
+              Connect your wallet above to open your private blockchain journal.
             </p>
+            <button
+              onClick={() => setAuthMode('guest')}
+              className="text-sm text-violet-500 dark:text-violet-400 hover:text-violet-700 dark:hover:text-violet-200 transition-colors underline underline-offset-2"
+            >
+              Or continue as guest
+            </button>
           </motion.div>
         )}
 
-        {/* State: Connected but locked */}
-        {isConnected && !encryptionKey && (
+        {/* Web3: Connected but locked */}
+        {showWeb3Unlock && (
           <motion.div
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
@@ -349,14 +516,14 @@ export default function JournalPage() {
             >
               {isUnlocking ? 'Signing...' : 'Unlock journal'}
             </motion.button>
-            {error && (
-              <p className="mt-4 text-sm text-red-500 dark:text-red-400">{error}</p>
+            {web3Error && (
+              <p className="mt-4 text-sm text-red-500 dark:text-red-400">{web3Error}</p>
             )}
           </motion.div>
         )}
 
-        {/* State: Loading entries */}
-        {isConnected && encryptionKey && isLoading && (
+        {/* Loading entries */}
+        {showEntries && isLoading && (
           <div className="space-y-4">
             {[1, 2, 3].map((i) => (
               <div key={i} className="glass-card p-6 animate-pulse">
@@ -368,8 +535,8 @@ export default function JournalPage() {
           </div>
         )}
 
-        {/* State: No entries yet */}
-        {isConnected && encryptionKey && !isLoading && entries.length === 0 && (
+        {/* No entries yet */}
+        {showEntries && !isLoading && entries.length === 0 && (
           <motion.div
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
@@ -388,20 +555,20 @@ export default function JournalPage() {
               Your journal is waiting
             </h3>
             <p className="text-violet-700 dark:text-violet-300 leading-relaxed max-w-sm mx-auto">
-              Add your first entry above. Your thoughts deserve a place that lasts forever.
+              Add your first entry. Your thoughts deserve a place that lasts{authMode === 'web3' ? ' forever' : ''}.
             </p>
           </motion.div>
         )}
 
-        {/* State: Entries loaded */}
-        {isConnected && encryptionKey && !isLoading && entries.length > 0 && (
+        {/* Entries loaded */}
+        {showEntries && !isLoading && entries.length > 0 && (
           <>
-            {!allRevealed && (
+            {authMode === 'web3' && !allRevealed && (
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 onClick={() => setAllRevealed(true)}
-                className="glass-card p-6 text-center cursor-pointer hover:bg-violet-100/30 dark:hover:bg-violet-800/20 transition-colors mb-4 border-l-4 border-l-violet-400 dark:border-l-violet-500"
+                className="glass-card p-4 text-center cursor-pointer hover:bg-violet-100/30 dark:hover:bg-violet-800/20 transition-colors mb-4 border-l-4 border-l-violet-400 dark:border-l-violet-500"
               >
                 <p className="text-violet-700 dark:text-violet-300 font-medium text-sm">
                   Click to reveal all entries
@@ -409,74 +576,114 @@ export default function JournalPage() {
               </motion.div>
             )}
 
-            <JournalFilters
-              searchQuery={searchQuery}
-              onSearchChange={setSearchQuery}
-              dateFrom={dateFrom}
-              dateTo={dateTo}
-              onDateFromChange={setDateFrom}
-              onDateToChange={setDateTo}
-              favoritesOnly={favoritesOnly}
-              onFavoritesOnlyChange={setFavoritesOnly}
-              favoriteCount={favoriteCountOnPage}
-            />
+            {/* Toolbar: filters + view switcher (outside diary) */}
+            <div className="flex items-start gap-3 mb-4">
+              <div className="flex-1 min-w-0">
+                <JournalFilters
+                  searchQuery={searchQuery}
+                  onSearchChange={setSearchQuery}
+                  dateFrom={dateFrom}
+                  dateTo={dateTo}
+                  onDateFromChange={setDateFrom}
+                  onDateToChange={setDateTo}
+                  favoritesOnly={favoritesOnly}
+                  onFavoritesOnlyChange={setFavoritesOnly}
+                  favoriteCount={favoriteCountOnPage}
+                />
+              </div>
+              <div className="shrink-0 pt-0.5">
+                <JournalViewSwitcher
+                  viewMode={viewMode}
+                  onViewModeChange={(v) => {
+                    setViewMode(v);
+                    if (v !== 'calendar') setSelectedDay(null);
+                  }}
+                />
+              </div>
+            </div>
 
+            {/* Diary container */}
             {filteredEntries.length === 0 ? (
-              <div className="glass-card p-8 text-center border-l-4 border-l-violet-400 dark:border-l-violet-500">
-                <p className="text-violet-700 dark:text-violet-300">
+              <DiaryContainer entryCount={0}>
+                <p className="text-violet-700 dark:text-violet-300 text-center py-6 text-sm">
                   No entries match your filters. Try adjusting search or date range.
                 </p>
-              </div>
+              </DiaryContainer>
             ) : (
-              <>
+              <DiaryContainer entryCount={filteredEntries.length}>
                 {viewMode === 'list' && (
                   <JournalListView
                     entries={filteredEntries}
-                    revealed={allRevealed}
+                    revealed={revealed}
                     isFavorite={isFavorite}
                     onToggleFavorite={toggleFavorite}
                     viewMode="list"
                     onDaySelect={setSelectedDay}
                     selectedDay={selectedDay}
+                    editable={editable}
+                    onEdit={handleEdit}
+                    canDelete={editable}
+                    onDelete={handleDelete}
+                    canSaveForever={editable}
+                    onSaveForever={handleSaveForever}
                   />
                 )}
                 {viewMode === 'timeline' && (
                   <JournalTimelineView
                     entries={filteredEntries}
-                    revealed={allRevealed}
+                    revealed={revealed}
                     isFavorite={isFavorite}
                     onToggleFavorite={toggleFavorite}
                     viewMode="timeline"
                     onDaySelect={setSelectedDay}
                     selectedDay={selectedDay}
+                    editable={editable}
+                    onEdit={handleEdit}
+                    canDelete={editable}
+                    onDelete={handleDelete}
+                    canSaveForever={editable}
+                    onSaveForever={handleSaveForever}
                   />
                 )}
                 {viewMode === 'grid' && (
                   <JournalGridView
                     entries={filteredEntries}
-                    revealed={allRevealed}
+                    revealed={revealed}
                     isFavorite={isFavorite}
                     onToggleFavorite={toggleFavorite}
                     viewMode="grid"
                     onDaySelect={setSelectedDay}
                     selectedDay={selectedDay}
+                    editable={editable}
+                    onEdit={handleEdit}
+                    canDelete={editable}
+                    onDelete={handleDelete}
+                    canSaveForever={editable}
+                    onSaveForever={handleSaveForever}
                   />
                 )}
                 {viewMode === 'calendar' && (
                   <JournalCalendarView
                     entries={filteredEntries}
-                    revealed={allRevealed}
+                    revealed={revealed}
                     isFavorite={isFavorite}
                     onToggleFavorite={toggleFavorite}
                     viewMode="calendar"
                     onDaySelect={setSelectedDay}
                     selectedDay={selectedDay}
+                    editable={editable}
+                    onEdit={handleEdit}
+                    canDelete={editable}
+                    onDelete={handleDelete}
+                    canSaveForever={editable}
+                    onSaveForever={handleSaveForever}
                   />
                 )}
-              </>
+              </DiaryContainer>
             )}
 
-            {totalPages > 1 && (
+            {/* Web3 pagination */}
+            {authMode === 'web3' && web3TotalPages > 1 && (
               <div className="flex justify-center items-center gap-4 mt-8">
                 <button
                   onClick={() => setCurrentPage((p) => Math.max(0, p - 1))}
@@ -489,11 +696,11 @@ export default function JournalPage() {
                   Previous
                 </button>
                 <span className="text-violet-600 dark:text-violet-300 text-sm tabular-nums min-w-[4rem] text-center">
-                  {currentPage + 1} / {totalPages}
+                  {currentPage + 1} / {web3TotalPages}
                 </span>
                 <button
-                  onClick={() => setCurrentPage((p) => Math.min(totalPages - 1, p + 1))}
-                  disabled={currentPage >= totalPages - 1}
+                  onClick={() => setCurrentPage((p) => Math.min(web3TotalPages - 1, p + 1))}
+                  disabled={currentPage >= web3TotalPages - 1}
                   className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-white/40 dark:bg-violet-800/40 backdrop-blur-sm text-violet-800 dark:text-violet-200 font-medium disabled:opacity-40 disabled:cursor-not-allowed hover:bg-white/60 dark:hover:bg-violet-700/50 transition-colors border border-violet-200/50 dark:border-violet-600/40"
                 >
                   Next
@@ -506,19 +713,19 @@ export default function JournalPage() {
           </>
         )}
 
-        {error && encryptionKey && (
+        {error && showEntries && (
           <p className="mt-4 text-sm text-red-500 dark:text-red-400 text-center">{error}</p>
         )}
       </div>
 
-      {/* FAB - Add entry (when viewing entries) */}
-      {isConnected && encryptionKey && entries.length > 0 && (
+      {/* FAB - Add entry */}
+      {canAddEntry && showEntries && entries.length > 0 && (
         <motion.button
           initial={{ opacity: 0, scale: 0.8 }}
           animate={{ opacity: 1, scale: 1 }}
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
-          onClick={() => setModalOpen(true)}
+          onClick={openAddModal}
           className="fixed bottom-6 right-6 z-20 w-14 h-14 rounded-2xl glass-button flex items-center justify-center shadow-lg"
           aria-label="Add entry"
         >
@@ -531,9 +738,27 @@ export default function JournalPage() {
 
       <AddQuoteModal
         isOpen={modalOpen}
-        onClose={() => setModalOpen(false)}
-        onSuccess={handleQuoteAdded}
+        onClose={() => { setModalOpen(false); setEditingEntry(null); }}
+        onSuccess={handleModalSuccess}
+        mode={authMode}
         encryptionKey={encryptionKey}
+        editEntry={editingEntry}
+        onGuestAdd={handleGuestAdd}
+        onWeb2Add={handleWeb2Add}
+        onGuestUpdate={handleGuestUpdate}
+        onWeb2Update={handleWeb2Update}
+      />
+
+      <SignInModal
+        isOpen={signInModalOpen}
+        onClose={() => setSignInModalOpen(false)}
+      />
+
+      <SaveForeverModal
+        isOpen={!!saveForeverEntry}
+        onClose={() => setSaveForeverEntry(null)}
+        onSuccess={handleSaveForeverSuccess}
+        entry={saveForeverEntry?.entry ?? null}
       />
     </main>
   );
