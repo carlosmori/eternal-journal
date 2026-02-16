@@ -333,7 +333,7 @@ export default function JournalPage() {
   );
 
   const handleWeb2Update = useCallback(
-    async (id: number, data: { date: string; title: string; description: string }) => {
+    async (id: string, data: { date: string; title: string; description: string }) => {
       await web2.updateEntry(id, data);
     },
     [web2],
@@ -342,7 +342,15 @@ export default function JournalPage() {
   const handleEdit = useCallback(
     (entryId: number | string, entry: JournalEntry) => {
       const idStr = String(entryId);
-      const id = idStr.includes('-') ? Number(idStr.split('-')[1]) : Number(idStr);
+      // guest-123 → number, web2-cuid → string
+      let id: number | string;
+      if (idStr.startsWith('guest-')) {
+        id = Number(idStr.slice(6));
+      } else if (idStr.startsWith('web2-')) {
+        id = idStr.slice(5);
+      } else {
+        id = idStr;
+      }
       setEditingEntry({
         id,
         date: entry.date,
@@ -366,7 +374,7 @@ export default function JournalPage() {
       if (idStr.startsWith('guest-')) {
         guest.removeEntry(Number(idStr.slice(6)));
       } else if (idStr.startsWith('web2-')) {
-        web2.deleteEntry(Number(idStr.slice(5)));
+        web2.deleteEntry(idStr.slice(5));
       }
     },
     [guest, web2],
@@ -381,11 +389,12 @@ export default function JournalPage() {
   const handleSaveForeverSuccess = useCallback(
     (keyFromModal?: Uint8Array) => {
       if (!saveForeverEntry) return;
-      const id = saveForeverEntry.entryId.includes('-') ? Number(saveForeverEntry.entryId.split('-')[1]) : Number(saveForeverEntry.entryId);
       if (saveForeverEntry.sourceMode === 'guest') {
-        guest.removeEntry(id);
+        const guestId = Number(saveForeverEntry.entryId.replace('guest-', ''));
+        guest.removeEntry(guestId);
       } else {
-        web2.deleteEntry(id);
+        const web2Id = saveForeverEntry.entryId.replace('web2-', '');
+        web2.deleteEntry(web2Id);
       }
       setSaveForeverEntry(null);
       // Use encryption key from modal if user unlocked there (so we can fetch without re-signing)

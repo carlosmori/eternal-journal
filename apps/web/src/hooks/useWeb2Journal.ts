@@ -6,7 +6,7 @@ import { useAuth } from '@/contexts/AuthContext';
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
 export interface Web2Entry {
-  id: number;
+  id: string;
   date: string;
   title: string;
   description: string;
@@ -62,7 +62,7 @@ export function useWeb2Journal() {
   );
 
   const updateEntry = useCallback(
-    async (id: number, data: { date: string; title: string; description: string }) => {
+    async (id: string, data: { date: string; title: string; description: string }) => {
       if (!jwt) throw new Error('Not authenticated');
       const res = await fetch(`${API_URL}/journal/${id}`, {
         method: 'PATCH',
@@ -81,7 +81,7 @@ export function useWeb2Journal() {
   );
 
   const deleteEntry = useCallback(
-    async (id: number) => {
+    async (id: string) => {
       if (!jwt) return;
       await fetch(`${API_URL}/journal/${id}`, {
         method: 'DELETE',

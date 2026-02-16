@@ -30,9 +30,9 @@ export class AuthController {
 
   @Get('google/callback')
   @UseGuards(GoogleAuthGuard)
-  googleCallback(@Req() req: Request, @Res() res: Response) {
+  async googleCallback(@Req() req: Request, @Res() res: Response) {
     const googleUser = req.user as GoogleUser;
-    const user = this.authService.findOrCreateUser(googleUser);
+    const user = await this.authService.findOrCreateUser(googleUser);
     const tokens = this.authService.generateTokens(user);
 
     // Use redirect_uri from cookie (set by frontend) or fallback to FRONTEND_URL

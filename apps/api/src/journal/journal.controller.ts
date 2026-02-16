@@ -5,7 +5,6 @@ import {
   Get,
   NotFoundException,
   Param,
-  ParseIntPipe,
   Patch,
   Post,
   Req,
@@ -33,13 +32,13 @@ export class JournalController {
   constructor(private readonly journalService: JournalService) {}
 
   @Get()
-  getEntries(@Req() req: Request) {
+  async getEntries(@Req() req: Request) {
     const user = req.user as { userId: string };
     return this.journalService.getAllByUser(user.userId);
   }
 
   @Post()
-  createEntry(@Req() req: Request, @Body() dto: CreateEntryDto) {
+  async createEntry(@Req() req: Request, @Body() dto: CreateEntryDto) {
     const user = req.user as { userId: string };
     return this.journalService.create(user.userId, {
       date: dto.date,
@@ -49,20 +48,20 @@ export class JournalController {
   }
 
   @Patch(':id')
-  updateEntry(
+  async updateEntry(
     @Req() req: Request,
-    @Param('id', ParseIntPipe) id: number,
+    @Param('id') id: string,
     @Body() dto: UpdateEntryDto,
   ) {
     const user = req.user as { userId: string };
-    const updated = this.journalService.update(user.userId, id, dto);
+    const updated = await this.journalService.update(user.userId, id, dto);
     if (!updated) throw new NotFoundException('Entry not found');
     return updated;
   }
 
   @Delete(':id')
-  deleteEntry(@Req() req: Request, @Param('id', ParseIntPipe) id: number) {
+  async deleteEntry(@Req() req: Request, @Param('id') id: string) {
     const user = req.user as { userId: string };
-    return { deleted: this.journalService.delete(user.userId, id) };
+    return { deleted: await this.journalService.delete(user.userId, id) };
   }
 }

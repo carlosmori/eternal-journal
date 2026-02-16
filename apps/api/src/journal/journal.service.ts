@@ -1,59 +1,73 @@
 import { Injectable } from '@nestjs/common';
-
-export interface JournalEntry {
-  id: number;
-  date: string;
-  title: string;
-  description: string;
-  timestamp: number;
-}
+import { PrismaService } from '../prisma/prisma.service';
+import type { JournalEntry } from '@prisma/client';
 
 @Injectable()
 export class JournalService {
-  private store = new Map<string, JournalEntry[]>();
+  constructor(private prisma: PrismaService) {}
 
-  getAllByUser(userId: string): JournalEntry[] {
-    return [...(this.store.get(userId) ?? [])];
+  async getAllByUser(googleId: string): Promise<JournalEntry[]> {
+    const user = await this.prisma.user.findUnique({
+      where: { googleId },
+    });
+    if (!user) return [];
+    return this.prisma.journalEntry.findMany({
+      where: { userId: user.id },
+      orderBy: { createdAt: 'desc' },
+    });
   }
 
-  create(
-    userId: string,
+  async create(
+    googleId: string,
     data: { date: string; title: string; description: string },
-  ): JournalEntry {
-    const entries = this.store.get(userId) ?? [];
-    const entry: JournalEntry = {
-      id: Date.now(),
-      date: data.date,
-      title: data.title,
-      description: data.description,
-      timestamp: Math.floor(Date.now() / 1000),
-    };
-    entries.unshift(entry);
-    this.store.set(userId, entries);
-    return entry;
+  ): Promise<JournalEntry> {
+    const user = await this.prisma.user.findUniqueOrThrow({
+      where: { googleId },
+    });
+    return this.prisma.journalEntry.create({
+      data: {
+        userId: user.id,
+        date: data.date,
+        title: data.title,
+        description: data.description,
+        timestamp: Math.floor(Date.now() / 1000),
+      },
+    });
   }
 
-  update(
-    userId: string,
-    entryId: number,
+  async update(
+    googleId: string,
+    entryId: string,
     data: Partial<{ date: string; title: string; description: string }>,
-  ): JournalEntry | null {
-    const entries = this.store.get(userId);
-    if (!entries) return null;
-    const entry = entries.find((e) => e.id === entryId);
+  ): Promise<JournalEntry | null> {
+    const user = await this.prisma.user.findUnique({
+      where: { googleId },
+    });
+    if (!user) return null;
+
+    const entry = await this.prisma.journalEntry.findFirst({
+      where: { id: entryId, userId: user.id },
+    });
     if (!entry) return null;
-    if (data.date !== undefined) entry.date = data.date;
-    if (data.title !== undefined) entry.title = data.title;
-    if (data.description !== undefined) entry.description = data.description;
-    return { ...entry };
+
+    return this.prisma.journalEntry.update({
+      where: { id: entryId },
+      data,
+    });
   }
 
-  delete(userId: string, entryId: number): boolean {
-    const entries = this.store.get(userId);
-    if (!entries) return false;
-    const idx = entries.findIndex((e) => e.id === entryId);
-    if (idx === -1) return false;
-    entries.splice(idx, 1);
+  async delete(googleId: string, entryId: string): Promise<boolean> {
+    const user = await this.prisma.user.findUnique({
+      where: { googleId },
+    });
+    if (!user) return false;
+
+    const entry = await this.prisma.journalEntry.findFirst({
+      where: { id: entryId, userId: user.id },
+    });
+    if (!entry) return false;
+
+    await this.prisma.journalEntry.delete({ where: { id: entryId } });
     return true;
   }
 }

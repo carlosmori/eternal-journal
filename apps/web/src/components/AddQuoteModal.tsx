@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 
 export interface EditingEntry {
-  id: number;
+  id: number | string;
   date: string;
   title: string;
   description: string;
@@ -19,7 +19,7 @@ interface AddQuoteModalProps {
   onGuestAdd?: (data: { date: string; title: string; description: string }) => void;
   onWeb2Add?: (data: { date: string; title: string; description: string }) => Promise<void>;
   onGuestUpdate?: (id: number, data: { date: string; title: string; description: string }) => void;
-  onWeb2Update?: (id: number, data: { date: string; title: string; description: string }) => Promise<void>;
+  onWeb2Update?: (id: string, data: { date: string; title: string; description: string }) => Promise<void>;
 }
 
 export function AddQuoteModal({
@@ -95,7 +95,7 @@ export function AddQuoteModal({
     try {
       if (mode === 'guest') {
         if (isEditing && editEntry) {
-          onGuestUpdate?.(editEntry.id, entryData);
+          onGuestUpdate?.(editEntry.id as number, entryData);
         } else {
           onGuestAdd?.(entryData);
         }
@@ -105,7 +105,7 @@ export function AddQuoteModal({
       }
 
       if (isEditing && editEntry) {
-        await onWeb2Update?.(editEntry.id, entryData);
+        await onWeb2Update?.(editEntry.id as string, entryData);
       } else {
         await onWeb2Add?.(entryData);
       }

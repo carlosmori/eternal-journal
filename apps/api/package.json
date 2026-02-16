@@ -2,10 +2,17 @@
   "name": "api",
   "version": "0.1.0",
   "private": true,
+  "prisma": {
+    "seed": "npx tsx prisma/seed.ts"
+  },
   "scripts": {
-    "build": "nest build",
+    "build": "prisma generate && nest build",
     "dev": "nest start --watch",
-    "start": "nest start"
+    "start": "nest start",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate": "prisma migrate dev",
+    "prisma:seed": "prisma db seed",
+    "prisma:studio": "prisma studio"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.0",
@@ -14,6 +21,7 @@
     "@nestjs/jwt": "^11.0.2",
     "@nestjs/passport": "^11.0.5",
     "@nestjs/platform-express": "^11.0.0",
+    "@prisma/client": "6.19.2",
     "cookie-parser": "^1.4.7",
     "passport": "^0.7.0",
     "passport-google-oauth20": "^2.0.0",
@@ -28,6 +36,7 @@
     "@types/node": "^22.0.0",
     "@types/passport-google-oauth20": "^2.0.17",
     "@types/passport-jwt": "^4.0.1",
+    "prisma": "6.19.2",
     "typescript": "^5.0.0"
   }
 }
