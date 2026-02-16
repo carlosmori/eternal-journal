@@ -15,10 +15,42 @@ Journal on the blockchain. MVP with Next.js, NestJS and TypeScript.
 
 ## Run
 
+### Con Docker (recomendado)
+
+1. **Levantar PostgreSQL:**
+   ```bash
+   docker run -d --name eternal-journal-db \
+     -p 5432:5432 \
+     -e POSTGRES_PASSWORD=postgres \
+     -e POSTGRES_DB=eternal_journal \
+     postgres:16
+   ```
+
+2. **Configurar y migrar:**
+   ```bash
+   cp apps/api/.env.example apps/api/.env
+   # Editar apps/api/.env con tus credenciales de Google OAuth (GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET)
+
+   cd apps/api && npx prisma migrate dev --name init
+   cd ../..
+   ```
+
+3. **Instalar y ejecutar:**
+   ```bash
+   yarn install
+   yarn dev
+   ```
+
+### Sin Docker
+
 ```bash
-npm install
-npm run dev
+yarn install
+yarn dev
 ```
+
+> Requiere PostgreSQL corriendo en `localhost:5432` con base `eternal_journal`. Ver [docs/DATABASE-SETUP.md](docs/DATABASE-SETUP.md).
+
+---
 
 - **Frontend**: http://localhost:3000
 - **API**: http://localhost:3001
