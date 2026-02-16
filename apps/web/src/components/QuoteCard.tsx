@@ -7,17 +7,17 @@ import type { JournalEntry } from '@/lib/crypto';
 interface QuoteCardProps {
   entry: JournalEntry;
   timestamp: number;
-  revealed: boolean;
-  entryIndex?: number;
+  entryIndex?: number | string;
   isFavorite?: boolean;
-  onToggleFavorite?: (entryIndex: number) => void;
+  onToggleFavorite?: (entryIndex: number | string) => void;
   compact?: boolean;
   editable?: boolean;
-  onEdit?: (entryIndex: number, entry: JournalEntry) => void;
+  onEdit?: (entryIndex: number | string, entry: JournalEntry) => void;
   canDelete?: boolean;
-  onDelete?: (entryIndex: number) => void;
+  onDelete?: (entryIndex: number | string) => void;
   canSaveForever?: boolean;
-  onSaveForever?: (entryIndex: number, entry: JournalEntry) => void;
+  onSaveForever?: (entryIndex: number | string, entry: JournalEntry) => void;
+  isForever?: boolean;
 }
 
 function EditIcon() {
@@ -50,15 +50,6 @@ function ForeverIcon() {
 }
 
 const TRUNCATE_LENGTH = 180;
-
-function CopyIcon() {
-  return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <rect width="14" height="14" x="8" y="8" rx="2" ry="2" />
-      <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />
-    </svg>
-  );
-}
 
 function ShareIcon() {
   return (
@@ -94,8 +85,7 @@ function HeartIcon({ filled }: { filled: boolean }) {
   );
 }
 
-export function QuoteCard({ entry, timestamp, revealed, entryIndex = -1, isFavorite = false, onToggleFavorite, compact = false, editable = false, onEdit, canDelete = false, onDelete, canSaveForever = false, onSaveForever }: QuoteCardProps) {
-  const [copied, setCopied] = useState(false);
+export function QuoteCard({ entry, timestamp, entryIndex = -1, isFavorite = false, onToggleFavorite, compact = false, editable = false, onEdit, canDelete = false, onDelete, canSaveForever = false, onSaveForever, isForever = false }: QuoteCardProps) {
   const [expanded, setExpanded] = useState(false);
 
   const blockDate = new Date(timestamp * 1000).toLocaleDateString('en-US', {
@@ -112,20 +102,7 @@ export function QuoteCard({ entry, timestamp, revealed, entryIndex = -1, isFavor
     ? entry.description.slice(0, TRUNCATE_LENGTH) + '...'
     : entry.description;
 
-  const handleCopy = useCallback(async () => {
-    if (!revealed) return;
-    const text = `${entry.title}\n\n${entry.description}\n\n— ${entry.date}`;
-    try {
-      await navigator.clipboard.writeText(text);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch {
-      // ignore
-    }
-  }, [entry, revealed]);
-
   const handleShare = useCallback(async () => {
-    if (!revealed) return;
     const text = `${entry.title}\n\n${entry.description}\n\n— ${entry.date}`;
     if (navigator.share) {
       try {
@@ -134,14 +111,20 @@ export function QuoteCard({ entry, timestamp, revealed, entryIndex = -1, isFavor
           text,
         });
       } catch {
-        handleCopy();
+        try {
+          await navigator.clipboard.writeText(text);
+        } catch {
+          // ignore
+        }
       }
     } else {
-      handleCopy();
+      try {
+        await navigator.clipboard.writeText(text);
+      } catch {
+        // ignore
+      }
     }
-  }, [entry, revealed, handleCopy]);
-
-  const blurClass = revealed ? '' : 'blur-md select-none';
+  }, [entry]);
 
   return (
     <motion.article
@@ -149,16 +132,26 @@ export function QuoteCard({ entry, timestamp, revealed, entryIndex = -1, isFavor
       transition={{ duration: 0.2 }}
       className={`glass-card overflow-hidden transition-all duration-500 cursor-default border-l-4 border-l-violet-500 dark:border-l-violet-400 ${compact ? 'p-4 pl-3' : ''}`}
     >
-      <div className={compact ? 'p-0' : 'p-6 pl-5'}>
-        {/* Header: date + favorite + actions */}
+      <div className={compact ? 'p-0' : 'p-4 sm:p-6 pl-4 sm:pl-5'}>
+        {/* Header: date + badge + favorite + actions */}
         <div className={`flex justify-between items-start gap-3 ${compact ? 'mb-2' : 'mb-4'}`}>
-          <span
-            className={`text-xs font-medium uppercase tracking-wider text-violet-600 dark:text-violet-400 font-mono transition-all duration-500 ${blurClass}`}
-          >
-            {entry.date}
-          </span>
+          <div className="flex items-center gap-2 flex-wrap">
+            <span
+              className="text-xs font-medium uppercase tracking-wider text-violet-600 dark:text-violet-400 font-mono"
+            >
+              {entry.date}
+            </span>
+            {isForever && (
+              <span className="inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-md bg-amber-100/80 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 border border-amber-200/60 dark:border-amber-700/40">
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                </svg>
+                Eternal
+              </span>
+            )}
+          </div>
           <div className="flex items-center gap-3 shrink-0">
-            {entryIndex >= 0 && onToggleFavorite && (
+            {entryIndex != null && entryIndex !== '' && onToggleFavorite && (
               <button
                 onClick={(e) => {
                   e.stopPropagation();
@@ -179,7 +172,7 @@ export function QuoteCard({ entry, timestamp, revealed, entryIndex = -1, isFavor
 
         {/* Title */}
         <h3
-          className={`font-semibold text-violet-900 dark:text-violet-100 transition-all duration-500 ${blurClass} ${compact ? 'text-base mb-1' : 'text-xl mb-3'}`}
+          className={`font-semibold text-violet-900 dark:text-violet-100 ${compact ? 'text-base mb-1' : 'text-xl mb-3'}`}
         >
           {entry.title}
         </h3>
@@ -189,13 +182,13 @@ export function QuoteCard({ entry, timestamp, revealed, entryIndex = -1, isFavor
 
         {/* Description */}
         <p
-          className={`text-violet-800 dark:text-violet-200 transition-all duration-500 whitespace-pre-wrap ${blurClass} ${compact ? 'text-sm leading-relaxed line-clamp-2' : 'leading-loose'}`}
+          className={`text-violet-800 dark:text-violet-200 whitespace-pre-wrap ${compact ? 'text-sm leading-relaxed line-clamp-2' : 'leading-loose'}`}
         >
           {displayDescription}
         </p>
 
         {/* Expand/Collapse for long text */}
-        {revealed && isLong && !compact && (
+        {isLong && !compact && (
           <button
             onClick={() => setExpanded(!expanded)}
             className="mt-2 text-sm font-medium text-violet-600 dark:text-violet-400 hover:text-violet-700 dark:hover:text-violet-300 flex items-center gap-1 transition-colors"
@@ -214,33 +207,33 @@ export function QuoteCard({ entry, timestamp, revealed, entryIndex = -1, isFavor
           </button>
         )}
 
-        {/* Action bar - visible when revealed */}
-        {revealed && !compact && (
-          <div className="mt-4 pt-3 flex flex-wrap items-center gap-2 border-t border-violet-200/40 dark:border-violet-700/30">
-            {editable && onEdit && entryIndex >= 0 && (
+        {/* Action bar */}
+        {!compact && (
+          <div className="mt-4 pt-3 flex flex-wrap items-center gap-1.5 sm:gap-2 border-t border-violet-200/40 dark:border-violet-700/30">
+            {!isForever && editable && onEdit && entryIndex != null && entryIndex !== '' && (
               <button
                 onClick={() => onEdit(entryIndex, entry)}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-violet-700 dark:text-violet-300 hover:bg-violet-200/40 dark:hover:bg-violet-800/40 transition-colors"
+                className="flex items-center gap-1.5 px-2.5 sm:px-3 py-2 sm:py-1.5 rounded-lg text-xs font-medium text-violet-700 dark:text-violet-300 hover:bg-violet-200/40 dark:hover:bg-violet-800/40 transition-colors"
                 title="Edit"
               >
                 <EditIcon />
                 Edit
               </button>
             )}
-            {canSaveForever && onSaveForever && entryIndex >= 0 && (
+            {!isForever && canSaveForever && onSaveForever && entryIndex != null && entryIndex !== '' && (
               <button
                 onClick={() => onSaveForever(entryIndex, entry)}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-amber-600 dark:text-amber-400 hover:bg-amber-100/50 dark:hover:bg-amber-900/20 transition-colors border border-amber-200/60 dark:border-amber-700/40"
+                className="flex items-center gap-1.5 px-2.5 sm:px-3 py-2 sm:py-1.5 rounded-lg text-xs font-medium text-amber-600 dark:text-amber-400 hover:bg-amber-100/50 dark:hover:bg-amber-900/20 transition-colors border border-amber-200/60 dark:border-amber-700/40"
                 title="Save forever on blockchain"
               >
                 <ForeverIcon />
                 Save forever
               </button>
             )}
-            {canDelete && onDelete && entryIndex >= 0 && (
+            {!isForever && canDelete && onDelete && entryIndex != null && entryIndex !== '' && (
               <button
                 onClick={() => onDelete(entryIndex)}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-red-600 dark:text-red-400 hover:bg-red-100/50 dark:hover:bg-red-900/20 transition-colors"
+                className="flex items-center gap-1.5 px-2.5 sm:px-3 py-2 sm:py-1.5 rounded-lg text-xs font-medium text-red-600 dark:text-red-400 hover:bg-red-100/50 dark:hover:bg-red-900/20 transition-colors"
                 title="Delete"
               >
                 <TrashIcon />
@@ -248,16 +241,8 @@ export function QuoteCard({ entry, timestamp, revealed, entryIndex = -1, isFavor
               </button>
             )}
             <button
-              onClick={handleCopy}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-violet-700 dark:text-violet-300 hover:bg-violet-200/40 dark:hover:bg-violet-800/40 transition-colors"
-              title="Copy"
-            >
-              <CopyIcon />
-              {copied ? 'Copied!' : 'Copy'}
-            </button>
-            <button
               onClick={handleShare}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-violet-700 dark:text-violet-300 hover:bg-violet-200/40 dark:hover:bg-violet-800/40 transition-colors"
+              className="flex items-center gap-1.5 px-2.5 sm:px-3 py-2 sm:py-1.5 rounded-lg text-xs font-medium text-violet-700 dark:text-violet-300 hover:bg-violet-200/40 dark:hover:bg-violet-800/40 transition-colors"
               title="Share"
             >
               <ShareIcon />

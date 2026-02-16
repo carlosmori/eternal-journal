@@ -22,11 +22,12 @@ import { useGuestEntries } from '@/hooks/useGuestEntries';
 import { useWeb2Journal } from '@/hooks/useWeb2Journal';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useAccount, useSignMessage, useReadContract } from 'wagmi';
+import { useSignMessage, useReadContract } from 'wagmi';
 import { hexToBytes } from 'viem';
 import { deriveKey, decryptEntry, SIGN_MESSAGE, type JournalEntry } from '@/lib/crypto';
 import { ETERNAL_JOURNAL_ABI, ETERNAL_JOURNAL_ADDRESS } from '@/lib/contract';
 import { sepoliaPublicClient } from '@/lib/sepoliaClient';
+import { loadGuestEntries, saveGuestEntries } from '@/lib/guestStorage';
 import { motion } from 'framer-motion';
 
 const UniverseScene = dynamic(() => import('@/components/UniverseScene'), {
@@ -38,13 +39,17 @@ const PAGE_SIZE = 20;
 interface DecryptedEntry {
   entry: JournalEntry;
   timestamp: number;
-  entryIndex: number;
+  entryIndex: number | string;
+  source: 'guest' | 'web2' | 'web3';
+}
+
+function contentKey(entry: JournalEntry) {
+  return `${entry.date}|${entry.title}|${entry.description}`;
 }
 
 export default function JournalPage() {
   const { theme, toggleTheme } = useTheme();
-  const { authMode, web2User, logoutWeb2, setAuthMode } = useAuth();
-  const { address, isConnected } = useAccount();
+  const { web2User, jwt, logoutWeb2, isConnected, address } = useAuth();
   const { signMessageAsync } = useSignMessage();
 
   // -- Guest mode --
@@ -61,14 +66,54 @@ export default function JournalPage() {
   const [isUnlocking, setIsUnlocking] = useState(false);
   const [web3Error, setWeb3Error] = useState('');
 
-  const [allRevealed, setAllRevealed] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [signInModalOpen, setSignInModalOpen] = useState(false);
   const [editingEntry, setEditingEntry] = useState<EditingEntry | null>(null);
-  const [saveForeverEntry, setSaveForeverEntry] = useState<{ id: number; entry: JournalEntry; sourceMode: 'guest' | 'web2' } | null>(null);
+  const [saveForeverEntry, setSaveForeverEntry] = useState<{ entryId: string; entry: JournalEntry; sourceMode: 'guest' | 'web2' } | null>(null);
   const [mounted, setMounted] = useState(false);
 
+  const [pendingGuestMigration, setPendingGuestMigration] = useState(false);
+  const [isMigrating, setIsMigrating] = useState(false);
+  const migrationCheckedRef = useRef(false);
+
   useEffect(() => setMounted(true), []);
+
+  // Check if guest entries exist when user logs in with Google
+  useEffect(() => {
+    if (jwt && !migrationCheckedRef.current) {
+      migrationCheckedRef.current = true;
+      const guestEntries = loadGuestEntries();
+      if (guestEntries.length > 0) {
+        setPendingGuestMigration(true);
+      }
+    }
+    if (!jwt) {
+      migrationCheckedRef.current = false;
+      setPendingGuestMigration(false);
+    }
+  }, [jwt]);
+
+  const handleMigrateGuest = useCallback(async () => {
+    if (!jwt) return;
+    setIsMigrating(true);
+    try {
+      const guestEntries = loadGuestEntries();
+      for (const ge of guestEntries) {
+        await web2.addEntry({ date: ge.date, title: ge.title, description: ge.description });
+      }
+      saveGuestEntries([]);
+      setPendingGuestMigration(false);
+    } catch {
+      // Silently fail; entries remain in localStorage
+    } finally {
+      setIsMigrating(false);
+    }
+  }, [jwt, web2]);
+
+  const handleDismissMigration = useCallback(() => {
+    setPendingGuestMigration(false);
+  }, []);
+
   const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [searchQuery, setSearchQuery] = useState('');
   const [dateFrom, setDateFrom] = useState('');
@@ -77,21 +122,27 @@ export default function JournalPage() {
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
 
   const favoritesKey = useMemo(() => {
-    if (authMode === 'web3') return address;
-    if (authMode === 'web2') return web2User?.userId;
-    return 'guest';
-  }, [authMode, address, web2User]);
+    return `merged-${web2User?.userId ?? 'g'}-${address ?? 'w'}`;
+  }, [web2User?.userId, address]);
 
   const { isFavorite, toggleFavorite } = useFavorites(favoritesKey);
+  const wrappedIsFavorite = useCallback(
+    (id: string | number) => isFavorite(String(id)),
+    [isFavorite],
+  );
+  const wrappedToggleFavorite = useCallback(
+    (id: string | number) => toggleFavorite(String(id)),
+    [toggleFavorite],
+  );
 
   // -- Web3 blockchain reading --
   const { data: entryCount, refetch: refetchCount } = useReadContract({
     address: ETERNAL_JOURNAL_ADDRESS,
     abi: ETERNAL_JOURNAL_ABI,
     functionName: 'getEntryCount',
-    args: address ? [address] : undefined,
+    args: address ? [address as `0x${string}`] : undefined,
     query: {
-      enabled: !!address && authMode === 'web3',
+      enabled: !!address,
       refetchInterval: false,
     },
   });
@@ -119,10 +170,11 @@ export default function JournalPage() {
   };
 
   const fetchPage = useCallback(
-    async (page: number, overrideCount?: number) => {
+    async (page: number, overrideCount?: number, keyOverride?: Uint8Array) => {
       const count =
         overrideCount !== undefined ? overrideCount : Number(entryCount ?? 0);
-      if (!address || !encryptionKey || (overrideCount === undefined && entryCount === undefined))
+      const key = keyOverride ?? encryptionKey;
+      if (!address || !key || (overrideCount === undefined && entryCount === undefined))
         return;
 
       if (count === 0) {
@@ -143,7 +195,7 @@ export default function JournalPage() {
           address: ETERNAL_JOURNAL_ADDRESS,
           abi: ETERNAL_JOURNAL_ABI,
           functionName: 'getEntries',
-          args: [address, BigInt(pageStartIdx), BigInt(pageEndIdx)],
+          args: [address as `0x${string}`, BigInt(pageStartIdx), BigInt(pageEndIdx)],
         });
 
         const batchResults = results as readonly {
@@ -157,8 +209,8 @@ export default function JournalPage() {
           try {
             const { timestamp, ciphertext } = batchResults[i];
             const ciphertextBytes = hexToBytes(ciphertext);
-            const entry = decryptEntry(encryptionKey, ciphertextBytes);
-            decrypted.push({ entry, timestamp: Number(timestamp), entryIndex });
+            const entry = decryptEntry(key, ciphertextBytes);
+            decrypted.push({ entry, timestamp: Number(timestamp), entryIndex, source: 'web3' });
           } catch {
             console.warn('Could not decrypt an entry');
           }
@@ -175,8 +227,7 @@ export default function JournalPage() {
   );
 
   useEffect(() => {
-    if (authMode !== 'web3') return;
-    if (!encryptionKey || !address || entryCount === undefined || web3Loading || manualRefreshRef.current) return;
+    if (!isConnected || !encryptionKey || !address || entryCount === undefined || web3Loading || manualRefreshRef.current) return;
 
     const count = Number(entryCount);
     const totalPages = Math.ceil(count / PAGE_SIZE);
@@ -191,88 +242,74 @@ export default function JournalPage() {
     }
     lastFetchedRef.current = { address, count, page: safePage };
     fetchPage(safePage);
-  }, [authMode, encryptionKey, entryCount, address, fetchPage, currentPage, web3Loading]);
+  }, [isConnected, encryptionKey, entryCount, address, fetchPage, currentPage, web3Loading]);
 
   useEffect(() => {
     setEncryptionKey(null);
     setWeb3Entries([]);
     setWeb3Error('');
     setCurrentPage(0);
-    setAllRevealed(false);
     lastFetchedRef.current = null;
   }, [address]);
 
-  const handleWeb3QuoteAdded = useCallback(() => {
-    setModalOpen(false);
-    setEditingEntry(null);
-    lastFetchedRef.current = null;
-    manualRefreshRef.current = true;
-    const newCount = Number(entryCount ?? 0) + 1;
-    setCurrentPage(0);
-    fetchPage(0, newCount).finally(() => {
-      if (address) {
-        lastFetchedRef.current = { address, count: newCount, page: 0 };
-      }
-      manualRefreshRef.current = false;
-    });
-    refetchCount();
-  }, [address, entryCount, refetchCount, fetchPage]);
-
-  // -- Unified entries for all modes --
+  // -- Merge entries from all active sources with reconciliation --
   const entries: DecryptedEntry[] = useMemo(() => {
-    if (authMode === 'guest') {
-      return guest.entries.map((e) => ({
-        entry: { date: e.date, title: e.title, description: e.description },
-        timestamp: e.timestamp,
-        entryIndex: e.id,
-      }));
+    const guestItems: DecryptedEntry[] = !jwt
+      ? guest.entries.map((e) => ({
+          entry: { date: e.date, title: e.title, description: e.description },
+          timestamp: e.timestamp,
+          entryIndex: `guest-${e.id}`,
+          source: 'guest' as const,
+        }))
+      : [];
+
+    const web2Items: DecryptedEntry[] = jwt
+      ? web2.entries.map((e) => ({
+          entry: { date: e.date, title: e.title, description: e.description },
+          timestamp: e.timestamp,
+          entryIndex: `web2-${e.id}`,
+          source: 'web2' as const,
+        }))
+      : [];
+
+    const web3Items: DecryptedEntry[] = web3Entries.map((e) => ({
+      ...e,
+      entryIndex: `web3-${e.entryIndex}`,
+      source: 'web3' as const,
+    }));
+
+    if (web2Items.length === 0 || web3Items.length === 0) {
+      return [...web3Items, ...web2Items, ...guestItems].sort((a, b) => b.timestamp - a.timestamp);
     }
-    if (authMode === 'web2') {
-      return web2.entries.map((e) => ({
-        entry: { date: e.date, title: e.title, description: e.description },
-        timestamp: e.timestamp,
-        entryIndex: e.id,
-      }));
-    }
-    return web3Entries;
-  }, [authMode, guest.entries, web2.entries, web3Entries]);
+    const web3ContentSet = new Set(web3Items.map((e) => contentKey(e.entry)));
+    const web2Filtered = web2Items.filter((e) => !web3ContentSet.has(contentKey(e.entry)));
+    return [...web3Items, ...web2Filtered, ...guestItems].sort((a, b) => b.timestamp - a.timestamp);
+  }, [jwt, guest.entries, web2.entries, web3Entries]);
 
   const isLoading = useMemo(() => {
-    if (authMode === 'guest') return guest.isLoading;
-    if (authMode === 'web2') return web2.isLoading;
-    return web3Loading;
-  }, [authMode, guest.isLoading, web2.isLoading, web3Loading]);
+    return guest.isLoading || web2.isLoading || web3Loading;
+  }, [guest.isLoading, web2.isLoading, web3Loading]);
 
   const error = useMemo(() => {
-    if (authMode === 'web2') return web2.error;
-    if (authMode === 'web3') return web3Error;
-    return '';
-  }, [authMode, web2.error, web3Error]);
+    return web2.error || web3Error;
+  }, [web2.error, web3Error]);
 
   const totalCount = useMemo(() => {
-    if (authMode === 'guest') return guest.totalCount;
-    if (authMode === 'web2') return web2.totalCount;
-    return Number(entryCount ?? 0);
-  }, [authMode, guest.totalCount, web2.totalCount, entryCount]);
+    return entries.length;
+  }, [entries.length]);
 
   const web3TotalPages = Math.ceil(Number(entryCount ?? 0) / PAGE_SIZE);
-  const revealed = authMode === 'web3' ? allRevealed : true;
-  const editable = authMode !== 'web3';
+  const hasWeb3Entries = web3Entries.length > 0;
+  const editable = true;
+  const canSaveForever = !!jwt;
 
-  const canAddEntry =
-    authMode === 'guest' ||
-    (authMode === 'web2' && !!web2User) ||
-    (authMode === 'web3' && !!encryptionKey);
+  const canAddEntry = true;
 
   // -- Modal handlers --
   const handleModalSuccess = useCallback(() => {
-    if (authMode === 'web3') {
-      handleWeb3QuoteAdded();
-    } else {
-      setModalOpen(false);
-      setEditingEntry(null);
-    }
-  }, [authMode, handleWeb3QuoteAdded]);
+    setModalOpen(false);
+    setEditingEntry(null);
+  }, []);
 
   const handleGuestAdd = useCallback(
     (data: { date: string; title: string; description: string }) => {
@@ -303,9 +340,11 @@ export default function JournalPage() {
   );
 
   const handleEdit = useCallback(
-    (entryIndex: number, entry: JournalEntry) => {
+    (entryId: number | string, entry: JournalEntry) => {
+      const idStr = String(entryId);
+      const id = idStr.includes('-') ? Number(idStr.split('-')[1]) : Number(idStr);
       setEditingEntry({
-        id: entryIndex,
+        id,
         date: entry.date,
         title: entry.title,
         description: entry.description,
@@ -321,31 +360,53 @@ export default function JournalPage() {
   }, []);
 
   const handleDelete = useCallback(
-    (entryIndex: number) => {
+    (entryId: number | string) => {
       if (!confirm('Delete this entry? This cannot be undone.')) return;
-      if (authMode === 'guest') {
-        guest.removeEntry(entryIndex);
-      } else if (authMode === 'web2') {
-        web2.deleteEntry(entryIndex);
+      const idStr = String(entryId);
+      if (idStr.startsWith('guest-')) {
+        guest.removeEntry(Number(idStr.slice(6)));
+      } else if (idStr.startsWith('web2-')) {
+        web2.deleteEntry(Number(idStr.slice(5)));
       }
     },
-    [authMode, guest, web2],
+    [guest, web2],
   );
 
-  const handleSaveForever = useCallback((entryIndex: number, entry: JournalEntry) => {
-    setSaveForeverEntry({ id: entryIndex, entry, sourceMode: authMode === 'web2' ? 'web2' : 'guest' });
-  }, [authMode]);
+  const handleSaveForever = useCallback((entryId: number | string, entry: JournalEntry) => {
+    const idStr = String(entryId);
+    const sourceMode = idStr.startsWith('web2-') ? 'web2' : 'guest';
+    setSaveForeverEntry({ entryId: idStr, entry, sourceMode });
+  }, []);
 
-  const handleSaveForeverSuccess = useCallback(() => {
-    if (!saveForeverEntry) return;
-    if (saveForeverEntry.sourceMode === 'guest') {
-      guest.removeEntry(saveForeverEntry.id);
-    } else {
-      web2.deleteEntry(saveForeverEntry.id);
-    }
-    setSaveForeverEntry(null);
-    refetchCount();
-  }, [saveForeverEntry, guest, web2, refetchCount]);
+  const handleSaveForeverSuccess = useCallback(
+    (keyFromModal?: Uint8Array) => {
+      if (!saveForeverEntry) return;
+      const id = saveForeverEntry.entryId.includes('-') ? Number(saveForeverEntry.entryId.split('-')[1]) : Number(saveForeverEntry.entryId);
+      if (saveForeverEntry.sourceMode === 'guest') {
+        guest.removeEntry(id);
+      } else {
+        web2.deleteEntry(id);
+      }
+      setSaveForeverEntry(null);
+      // Use encryption key from modal if user unlocked there (so we can fetch without re-signing)
+      if (keyFromModal) {
+        setEncryptionKey(keyFromModal);
+      }
+      // Refresh web3 entries so the new blockchain entry appears in the list
+      lastFetchedRef.current = null;
+      manualRefreshRef.current = true;
+      const newCount = Number(entryCount ?? 0) + 1;
+      setCurrentPage(0);
+      fetchPage(0, newCount, keyFromModal).finally(() => {
+        if (address) {
+          lastFetchedRef.current = { address, count: newCount, page: 0 };
+        }
+        manualRefreshRef.current = false;
+      });
+      refetchCount();
+    },
+    [saveForeverEntry, guest, web2, refetchCount, entryCount, address, fetchPage],
+  );
 
   // -- Filters --
   const filteredEntries = useMemo(() => {
@@ -362,19 +423,18 @@ export default function JournalPage() {
         if (dateFrom && d < dateFrom) return false;
         if (dateTo && d > dateTo) return false;
       }
-      if (favoritesOnly && !isFavorite(item.entryIndex)) return false;
+      if (favoritesOnly && !isFavorite(String(item.entryIndex))) return false;
       return true;
     });
   }, [entries, searchQuery, dateFrom, dateTo, favoritesOnly, isFavorite]);
 
   const favoriteCountOnPage = useMemo(
-    () => entries.filter((e) => isFavorite(e.entryIndex)).length,
+    () => entries.filter((e) => isFavorite(String(e.entryIndex))).length,
     [entries, isFavorite],
   );
 
-  const showWeb3Connect = authMode === 'web3' && !isConnected;
-  const showWeb3Unlock = authMode === 'web3' && isConnected && !encryptionKey;
-  const showEntries = !showWeb3Connect && !showWeb3Unlock;
+  const showUnlockBanner = jwt && isConnected && !encryptionKey;
+  const showEntries = true;
 
   return (
     <main className="min-h-screen bg-gradient-to-br from-violet-100 via-fuchsia-50 to-violet-200 dark:from-[#0f0520] dark:via-[#150a30] dark:to-[#1a0535] transition-colors relative overflow-hidden">
@@ -395,41 +455,40 @@ export default function JournalPage() {
         }}
       />
 
-      {/* Header - simplified */}
+      {/* Header - responsive */}
       <header className="sticky top-0 z-20 backdrop-blur-2xl bg-white/50 dark:bg-violet-950/40 border-b-2 border-violet-200/60 dark:border-violet-700/40 shadow-sm">
-        <div className="max-w-4xl mx-auto px-4 py-4 flex justify-between items-center">
-          <a href="/" className="flex items-center gap-3 font-semibold text-violet-900 dark:text-white text-lg tracking-tight">
-            <img src="/logo.svg" alt="Eternal Journal" className="h-9 w-auto" />
-            Eternal Journal
+        <div className="max-w-4xl mx-auto px-3 sm:px-4 py-3 sm:py-4 flex justify-between items-center gap-2 min-w-0">
+          <a href="/" className="flex items-center gap-2 sm:gap-3 font-semibold text-violet-900 dark:text-white text-base sm:text-lg tracking-tight shrink-0 min-w-0">
+            <img src="/logo.svg" alt="Eternal Journal" className="h-8 sm:h-9 w-auto shrink-0" />
+            <span className="hidden sm:inline truncate">Eternal Journal</span>
           </a>
-          <div className="flex items-center gap-2">
-            {/* Auth area: unified */}
-            {authMode === 'guest' && (
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+            {!jwt && (
               <button
                 onClick={() => setSignInModalOpen(true)}
-                className="px-3 py-2 rounded-xl text-sm font-medium text-violet-700 dark:text-violet-300 bg-white/40 dark:bg-violet-800/30 border border-violet-200/40 dark:border-violet-600/30 hover:bg-white/60 dark:hover:bg-violet-700/40 transition-colors"
+                className="px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-xl text-xs sm:text-sm font-medium text-violet-700 dark:text-violet-300 bg-white/40 dark:bg-violet-800/30 border border-violet-200/40 dark:border-violet-600/30 hover:bg-white/60 dark:hover:bg-violet-700/40 transition-colors"
               >
                 Sign in
               </button>
             )}
-            {authMode === 'web2' && web2User && (
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-full bg-violet-200/60 dark:bg-violet-700/40 flex items-center justify-center text-xs font-bold text-violet-700 dark:text-violet-300 uppercase">
+            {jwt && web2User && (
+              <div className="flex items-center gap-1.5 sm:gap-2">
+                <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-violet-200/60 dark:bg-violet-700/40 flex items-center justify-center text-xs font-bold text-violet-700 dark:text-violet-300 uppercase shrink-0">
                   {(web2User.name || web2User.email || '?')[0]}
                 </div>
                 <button
                   onClick={logoutWeb2}
-                  className="text-xs text-violet-500 dark:text-violet-400 hover:text-violet-700 dark:hover:text-violet-200 transition-colors"
+                  className="text-xs text-violet-500 dark:text-violet-400 hover:text-violet-700 dark:hover:text-violet-200 transition-colors whitespace-nowrap"
                 >
                   Sign out
                 </button>
               </div>
             )}
-            {authMode === 'web3' && <ConnectButton />}
+            <ConnectButton />
 
             <button
               onClick={toggleTheme}
-              className="w-9 h-9 rounded-xl bg-white/40 dark:bg-violet-800/30 backdrop-blur-sm flex items-center justify-center text-violet-700 dark:text-violet-200 hover:bg-white/60 dark:hover:bg-violet-700/40 transition-colors"
+              className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg sm:rounded-xl bg-white/40 dark:bg-violet-800/30 backdrop-blur-sm flex items-center justify-center text-violet-700 dark:text-violet-200 hover:bg-white/60 dark:hover:bg-violet-700/40 transition-colors shrink-0"
               aria-label={theme === 'dark' ? 'Light mode' : 'Dark mode'}
             >
               {theme === 'dark' ? '\u2600\uFE0F' : '\uD83C\uDF19'}
@@ -441,7 +500,7 @@ export default function JournalPage() {
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.97 }}
                 onClick={openAddModal}
-                className="w-9 h-9 rounded-xl glass-button flex items-center justify-center"
+                className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg sm:rounded-xl glass-button flex items-center justify-center shrink-0"
                 aria-label="Add entry"
               >
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -454,70 +513,72 @@ export default function JournalPage() {
         </div>
       </header>
 
-      <div className={`relative z-10 max-w-4xl mx-auto px-4 py-8 ${showEntries && entries.length > 0 ? 'pb-24' : ''}`}>
+      <div className={`relative z-10 max-w-4xl mx-auto px-3 sm:px-4 py-6 sm:py-8 ${showEntries && entries.length > 0 ? 'pb-28 sm:pb-24' : ''}`}>
         {/* Guest banner */}
-        {authMode === 'guest' && <GuestBanner onOpenSignIn={() => setSignInModalOpen(true)} />}
+        {!jwt && <GuestBanner onOpenSignIn={() => setSignInModalOpen(true)} />}
 
-        {/* Web3: Not connected */}
-        {showWeb3Connect && (
+        {/* Migration banner: offer to import guest entries after Google login */}
+        {pendingGuestMigration && (
           <motion.div
-            initial={{ opacity: 0, y: 16 }}
+            initial={{ opacity: 0, y: 4 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-            className="glass-card p-12 text-center border-l-4 border-l-violet-400 dark:border-l-violet-500"
+            className="glass-card px-4 py-3 flex items-center gap-3 mb-4 text-sm border-l-4 border-l-amber-400 dark:border-l-amber-500"
           >
-            <div className="w-16 h-16 mx-auto mb-6 rounded-2xl bg-gradient-to-br from-violet-400/20 to-fuchsia-400/20 dark:from-violet-500/20 dark:to-fuchsia-500/20 flex items-center justify-center text-violet-600 dark:text-violet-400 ring-2 ring-violet-200/50 dark:ring-violet-700/30">
-              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M19 7V4a1 1 0 0 0-1-1H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h13a1 1 0 0 0 1-1v-4" />
-                <circle cx="18" cy="12" r="1" fill="currentColor" />
-              </svg>
-            </div>
-            <h3 className="text-xl font-semibold text-violet-900 dark:text-violet-100 mb-2">
-              Your journal awaits
-            </h3>
-            <p className="text-violet-700 dark:text-violet-300 leading-relaxed max-w-sm mx-auto mb-4">
-              Connect your wallet above to open your private blockchain journal.
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 text-amber-500 dark:text-amber-400">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+              <polyline points="7 10 12 15 17 10" />
+              <line x1="12" x2="12" y1="15" y2="3" />
+            </svg>
+            <p className="text-violet-700 dark:text-violet-300 flex-1">
+              You have entries saved locally. Import them to your account?
             </p>
-            <button
-              onClick={() => setAuthMode('guest')}
-              className="text-sm text-violet-500 dark:text-violet-400 hover:text-violet-700 dark:hover:text-violet-200 transition-colors underline underline-offset-2"
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.97 }}
+              onClick={handleMigrateGuest}
+              disabled={isMigrating}
+              className="shrink-0 px-3 py-1.5 rounded-lg text-xs font-medium glass-button disabled:opacity-50"
             >
-              Or continue as guest
+              {isMigrating ? 'Importing...' : 'Import'}
+            </motion.button>
+            <button
+              onClick={handleDismissMigration}
+              className="shrink-0 p-1 rounded text-violet-400 dark:text-violet-500 hover:text-violet-600 dark:hover:text-violet-300 transition-colors"
+              aria-label="Dismiss"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M18 6L6 18" />
+                <path d="M6 6l12 12" />
+              </svg>
             </button>
           </motion.div>
         )}
 
-        {/* Web3: Connected but locked */}
-        {showWeb3Unlock && (
+        {/* Web3: Google logged in + Wallet connected but not unlocked */}
+        {showUnlockBanner && (
           <motion.div
-            initial={{ opacity: 0, y: 16 }}
+            initial={{ opacity: 0, y: 4 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-            className="glass-card p-12 text-center border-l-4 border-l-violet-400 dark:border-l-violet-500"
+            className="glass-card px-4 py-3 flex items-center gap-3 mb-4 text-sm"
           >
-            <div className="w-16 h-16 mx-auto mb-6 rounded-2xl bg-gradient-to-br from-violet-400/20 to-fuchsia-400/20 dark:from-violet-500/20 dark:to-fuchsia-500/20 flex items-center justify-center text-violet-600 dark:text-violet-400 ring-2 ring-violet-200/50 dark:ring-violet-700/30">
-              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                <rect width="18" height="11" x="3" y="11" rx="2" ry="2" />
-                <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-              </svg>
-            </div>
-            <h3 className="text-xl font-semibold text-violet-900 dark:text-violet-100 mb-2">
-              Your journal is kept safe
-            </h3>
-            <p className="text-violet-700 dark:text-violet-300 leading-relaxed max-w-sm mx-auto mb-6">
-              Sign once with your wallet to unlock. Your signature proves it&apos;s you — only you can ever read what you write.
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 text-violet-500 dark:text-violet-400">
+              <rect width="18" height="11" x="3" y="11" rx="2" ry="2" />
+              <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+            </svg>
+            <p className="text-violet-700 dark:text-violet-300 flex-1">
+              Unlock your wallet to view blockchain entries and enable &quot;Save forever&quot;.
             </p>
             <motion.button
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.97 }}
               onClick={handleUnlock}
               disabled={isUnlocking}
-              className="glass-button px-8 py-3 disabled:opacity-50"
+              className="shrink-0 px-3 py-1.5 rounded-lg text-xs font-medium glass-button disabled:opacity-50"
             >
-              {isUnlocking ? 'Signing...' : 'Unlock journal'}
+              {isUnlocking ? 'Signing...' : 'Unlock'}
             </motion.button>
             {web3Error && (
-              <p className="mt-4 text-sm text-red-500 dark:text-red-400">{web3Error}</p>
+              <p className="text-xs text-red-500 dark:text-red-400 shrink-0">{web3Error}</p>
             )}
           </motion.div>
         )}
@@ -555,7 +616,7 @@ export default function JournalPage() {
               Your journal is waiting
             </h3>
             <p className="text-violet-700 dark:text-violet-300 leading-relaxed max-w-sm mx-auto">
-              Add your first entry. Your thoughts deserve a place that lasts{authMode === 'web3' ? ' forever' : ''}.
+              Add your first entry. Your thoughts deserve a place that lasts{isConnected ? ' forever' : ''}.
             </p>
           </motion.div>
         )}
@@ -563,22 +624,9 @@ export default function JournalPage() {
         {/* Entries loaded */}
         {showEntries && !isLoading && entries.length > 0 && (
           <>
-            {authMode === 'web3' && !allRevealed && (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                onClick={() => setAllRevealed(true)}
-                className="glass-card p-4 text-center cursor-pointer hover:bg-violet-100/30 dark:hover:bg-violet-800/20 transition-colors mb-4 border-l-4 border-l-violet-400 dark:border-l-violet-500"
-              >
-                <p className="text-violet-700 dark:text-violet-300 font-medium text-sm">
-                  Click to reveal all entries
-                </p>
-              </motion.div>
-            )}
-
             {/* Toolbar: filters + view switcher (outside diary) */}
-            <div className="flex items-start gap-3 mb-4">
-              <div className="flex-1 min-w-0">
+            <div className="flex flex-col sm:flex-row sm:items-start gap-3 mb-4">
+              <div className="flex-1 min-w-0 w-full">
                 <JournalFilters
                   searchQuery={searchQuery}
                   onSearchChange={setSearchQuery}
@@ -614,9 +662,9 @@ export default function JournalPage() {
                 {viewMode === 'list' && (
                   <JournalListView
                     entries={filteredEntries}
-                    revealed={revealed}
-                    isFavorite={isFavorite}
-                    onToggleFavorite={toggleFavorite}
+
+                    isFavorite={wrappedIsFavorite}
+                    onToggleFavorite={wrappedToggleFavorite}
                     viewMode="list"
                     onDaySelect={setSelectedDay}
                     selectedDay={selectedDay}
@@ -624,16 +672,16 @@ export default function JournalPage() {
                     onEdit={handleEdit}
                     canDelete={editable}
                     onDelete={handleDelete}
-                    canSaveForever={editable}
+                    canSaveForever={canSaveForever}
                     onSaveForever={handleSaveForever}
                   />
                 )}
                 {viewMode === 'timeline' && (
                   <JournalTimelineView
                     entries={filteredEntries}
-                    revealed={revealed}
-                    isFavorite={isFavorite}
-                    onToggleFavorite={toggleFavorite}
+
+                    isFavorite={wrappedIsFavorite}
+                    onToggleFavorite={wrappedToggleFavorite}
                     viewMode="timeline"
                     onDaySelect={setSelectedDay}
                     selectedDay={selectedDay}
@@ -641,16 +689,16 @@ export default function JournalPage() {
                     onEdit={handleEdit}
                     canDelete={editable}
                     onDelete={handleDelete}
-                    canSaveForever={editable}
+                    canSaveForever={canSaveForever}
                     onSaveForever={handleSaveForever}
                   />
                 )}
                 {viewMode === 'grid' && (
                   <JournalGridView
                     entries={filteredEntries}
-                    revealed={revealed}
-                    isFavorite={isFavorite}
-                    onToggleFavorite={toggleFavorite}
+
+                    isFavorite={wrappedIsFavorite}
+                    onToggleFavorite={wrappedToggleFavorite}
                     viewMode="grid"
                     onDaySelect={setSelectedDay}
                     selectedDay={selectedDay}
@@ -658,16 +706,16 @@ export default function JournalPage() {
                     onEdit={handleEdit}
                     canDelete={editable}
                     onDelete={handleDelete}
-                    canSaveForever={editable}
+                    canSaveForever={canSaveForever}
                     onSaveForever={handleSaveForever}
                   />
                 )}
                 {viewMode === 'calendar' && (
                   <JournalCalendarView
                     entries={filteredEntries}
-                    revealed={revealed}
-                    isFavorite={isFavorite}
-                    onToggleFavorite={toggleFavorite}
+
+                    isFavorite={wrappedIsFavorite}
+                    onToggleFavorite={wrappedToggleFavorite}
                     viewMode="calendar"
                     onDaySelect={setSelectedDay}
                     selectedDay={selectedDay}
@@ -675,7 +723,7 @@ export default function JournalPage() {
                     onEdit={handleEdit}
                     canDelete={editable}
                     onDelete={handleDelete}
-                    canSaveForever={editable}
+                    canSaveForever={canSaveForever}
                     onSaveForever={handleSaveForever}
                   />
                 )}
@@ -683,27 +731,27 @@ export default function JournalPage() {
             )}
 
             {/* Web3 pagination */}
-            {authMode === 'web3' && web3TotalPages > 1 && (
-              <div className="flex justify-center items-center gap-4 mt-8">
+            {hasWeb3Entries && web3TotalPages > 1 && (
+              <div className="flex justify-center items-center gap-2 sm:gap-4 mt-6 sm:mt-8">
                 <button
                   onClick={() => setCurrentPage((p) => Math.max(0, p - 1))}
                   disabled={currentPage === 0}
-                  className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-white/40 dark:bg-violet-800/40 backdrop-blur-sm text-violet-800 dark:text-violet-200 font-medium disabled:opacity-40 disabled:cursor-not-allowed hover:bg-white/60 dark:hover:bg-violet-700/50 transition-colors border border-violet-200/50 dark:border-violet-600/40"
+                  className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-5 py-2 sm:py-2.5 rounded-xl bg-white/40 dark:bg-violet-800/40 backdrop-blur-sm text-violet-800 dark:text-violet-200 font-medium disabled:opacity-40 disabled:cursor-not-allowed hover:bg-white/60 dark:hover:bg-violet-700/50 transition-colors border border-violet-200/50 dark:border-violet-600/40"
                 >
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <path d="m15 18-6-6 6-6" />
                   </svg>
-                  Previous
+                  <span className="hidden sm:inline">Previous</span>
                 </button>
-                <span className="text-violet-600 dark:text-violet-300 text-sm tabular-nums min-w-[4rem] text-center">
+                <span className="text-violet-600 dark:text-violet-300 text-xs sm:text-sm tabular-nums min-w-[3rem] sm:min-w-[4rem] text-center">
                   {currentPage + 1} / {web3TotalPages}
                 </span>
                 <button
                   onClick={() => setCurrentPage((p) => Math.min(web3TotalPages - 1, p + 1))}
                   disabled={currentPage >= web3TotalPages - 1}
-                  className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-white/40 dark:bg-violet-800/40 backdrop-blur-sm text-violet-800 dark:text-violet-200 font-medium disabled:opacity-40 disabled:cursor-not-allowed hover:bg-white/60 dark:hover:bg-violet-700/50 transition-colors border border-violet-200/50 dark:border-violet-600/40"
+                  className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-5 py-2 sm:py-2.5 rounded-xl bg-white/40 dark:bg-violet-800/40 backdrop-blur-sm text-violet-800 dark:text-violet-200 font-medium disabled:opacity-40 disabled:cursor-not-allowed hover:bg-white/60 dark:hover:bg-violet-700/50 transition-colors border border-violet-200/50 dark:border-violet-600/40"
                 >
-                  Next
+                  <span className="hidden sm:inline">Next</span>
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <path d="m9 18 6-6-6-6" />
                   </svg>
@@ -726,7 +774,7 @@ export default function JournalPage() {
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
           onClick={openAddModal}
-          className="fixed bottom-6 right-6 z-20 w-14 h-14 rounded-2xl glass-button flex items-center justify-center shadow-lg"
+          className="fixed z-20 w-12 h-12 sm:w-14 sm:h-14 rounded-xl sm:rounded-2xl glass-button flex items-center justify-center shadow-lg bottom-[max(1rem,env(safe-area-inset-bottom))] right-[max(1rem,env(safe-area-inset-right))]"
           aria-label="Add entry"
         >
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -740,8 +788,7 @@ export default function JournalPage() {
         isOpen={modalOpen}
         onClose={() => { setModalOpen(false); setEditingEntry(null); }}
         onSuccess={handleModalSuccess}
-        mode={authMode}
-        encryptionKey={encryptionKey}
+        mode={jwt ? 'web2' : 'guest'}
         editEntry={editingEntry}
         onGuestAdd={handleGuestAdd}
         onWeb2Add={handleWeb2Add}
@@ -759,6 +806,8 @@ export default function JournalPage() {
         onClose={() => setSaveForeverEntry(null)}
         onSuccess={handleSaveForeverSuccess}
         entry={saveForeverEntry?.entry ?? null}
+        requiresGoogleAuth={!jwt}
+        onOpenSignIn={() => { setSaveForeverEntry(null); setSignInModalOpen(true); }}
       />
     </main>
   );

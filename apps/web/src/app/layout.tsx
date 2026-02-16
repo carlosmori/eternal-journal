@@ -1,4 +1,4 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import Script from 'next/script';
 import { cookies } from 'next/headers';
 import { Plus_Jakarta_Sans } from 'next/font/google';
@@ -16,6 +16,12 @@ const jakarta = Plus_Jakarta_Sans({
 export const metadata: Metadata = {
   title: 'Eternal Journal',
   description: 'A place for your thoughts to live forever. Private, encrypted, and built with care.',
+};
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  viewportFit: 'cover',
 };
 
 export default async function RootLayout({

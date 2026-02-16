@@ -60,17 +60,18 @@ const views: { id: ViewMode; label: string; icon: React.ReactNode }[] = [
 
 export function JournalViewSwitcher({ viewMode, onViewModeChange }: JournalViewSwitcherProps) {
   return (
-    <div className="flex rounded-xl bg-white/30 dark:bg-violet-800/30 p-1 border border-violet-200/50 dark:border-violet-600/40">
+    <div className="flex rounded-xl bg-white/30 dark:bg-violet-800/30 p-1 border border-violet-200/50 dark:border-violet-600/40 overflow-x-auto">
       {views.map((v) => (
         <button
           key={v.id}
           onClick={() => onViewModeChange(v.id)}
-          className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+          className={`flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-lg text-sm font-medium transition-colors shrink-0 min-w-[2.5rem] sm:min-w-0 ${
             viewMode === v.id
               ? 'bg-white dark:bg-violet-700/50 text-violet-900 dark:text-violet-100 shadow-sm'
               : 'text-violet-600 dark:text-violet-400 hover:text-violet-800 dark:hover:text-violet-200'
           }`}
           title={v.label}
+          aria-label={v.label}
         >
           {v.icon}
           <span className="hidden sm:inline">{v.label}</span>

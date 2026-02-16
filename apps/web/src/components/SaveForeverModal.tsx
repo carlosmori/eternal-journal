@@ -13,11 +13,13 @@ type Step = 'explain' | 'connect' | 'unlock' | 'saving' | 'done';
 interface SaveForeverModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSuccess: () => void;
+  onSuccess: (encryptionKey?: Uint8Array) => void;
   entry: JournalEntry | null;
+  requiresGoogleAuth?: boolean;
+  onOpenSignIn?: () => void;
 }
 
-export function SaveForeverModal({ isOpen, onClose, onSuccess, entry }: SaveForeverModalProps) {
+export function SaveForeverModal({ isOpen, onClose, onSuccess, entry, requiresGoogleAuth = false, onOpenSignIn }: SaveForeverModalProps) {
   const [step, setStep] = useState<Step>('explain');
   const [message, setMessage] = useState('');
   const [encryptionKey, setEncryptionKey] = useState<Uint8Array | null>(null);
@@ -39,10 +41,10 @@ export function SaveForeverModal({ isOpen, onClose, onSuccess, entry }: SaveFore
     if (txConfirmed && !hasCalledSuccessRef.current) {
       hasCalledSuccessRef.current = true;
       setStep('done');
-      onSuccess();
+      onSuccess(encryptionKey ?? undefined);
       onClose();
     }
-  }, [txConfirmed, onSuccess, onClose]);
+  }, [txConfirmed, onSuccess, onClose, encryptionKey]);
 
   useEffect(() => {
     if (isOpen && entry) {
@@ -73,6 +75,10 @@ export function SaveForeverModal({ isOpen, onClose, onSuccess, entry }: SaveFore
 
   const handleUnderstand = () => {
     if (!entry) return;
+    if (requiresGoogleAuth) {
+      setMessage('You need a Google account to save on the blockchain.');
+      return;
+    }
     if (isOverLimit) {
       setMessage(`Entry exceeds the ${MAX_ENTRY_BYTES} byte limit.`);
       return;
@@ -97,7 +103,7 @@ export function SaveForeverModal({ isOpen, onClose, onSuccess, entry }: SaveFore
       const key = deriveKey(signature);
       setEncryptionKey(key);
       setStep('saving');
-      doSave();
+      doSave(key);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Error signing';
       if (msg.includes('User rejected') || msg.includes('user rejected')) {
@@ -108,15 +114,16 @@ export function SaveForeverModal({ isOpen, onClose, onSuccess, entry }: SaveFore
     }
   };
 
-  const doSave = async () => {
-    if (!entry || !encryptionKey || !fee) {
+  const doSave = async (keyOverride?: Uint8Array) => {
+    const key = keyOverride ?? encryptionKey;
+    if (!entry || !key || !fee) {
       setMessage('Missing data. Please try again.');
       setStep('explain');
       return;
     }
     setMessage('');
     try {
-      const encrypted = encryptEntry(encryptionKey, entry);
+      const encrypted = encryptEntry(key, entry);
       const encryptedHex = bytesToHex(encrypted);
       const hash = await writeContractAsync({
         address: ETERNAL_JOURNAL_ADDRESS,
@@ -151,14 +158,14 @@ export function SaveForeverModal({ isOpen, onClose, onSuccess, entry }: SaveFore
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/30 backdrop-blur-md"
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/30 backdrop-blur-md overflow-y-auto"
       onClick={step !== 'saving' ? onClose : undefined}
     >
       <motion.div
         initial={{ scale: 0.95, opacity: 0, y: 10 }}
         animate={{ scale: 1, opacity: 1, y: 0 }}
         transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-        className="liquid-glass w-full max-w-md p-6 border-2 border-violet-200/50 dark:border-violet-600/40 shadow-2xl shadow-violet-900/20"
+        className="liquid-glass w-full max-w-md max-h-[90dvh] overflow-y-auto p-4 sm:p-6 border-2 border-violet-200/50 dark:border-violet-600/40 shadow-2xl shadow-violet-900/20 my-auto"
         onClick={(e: React.MouseEvent) => e.stopPropagation()}
       >
         <div className="flex justify-between items-center mb-4">

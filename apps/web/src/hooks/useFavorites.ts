@@ -5,22 +5,22 @@ import { useCallback, useEffect, useState } from 'react';
 const STORAGE_KEY = 'eternal-journal-favorites';
 
 function getKey(userKey: string) {
-  return `${STORAGE_KEY}-${userKey.toLowerCase()}`;
+  return `${STORAGE_KEY}-${userKey}`;
 }
 
-function loadFavorites(userKey: string): Set<number> {
+function loadFavorites(userKey: string): Set<string> {
   if (typeof window === 'undefined') return new Set();
   try {
     const raw = localStorage.getItem(getKey(userKey));
     if (!raw) return new Set();
-    const arr = JSON.parse(raw) as number[];
+    const arr = JSON.parse(raw) as string[];
     return new Set(arr);
   } catch {
     return new Set();
   }
 }
 
-function saveFavorites(userKey: string, set: Set<number>) {
+function saveFavorites(userKey: string, set: Set<string>) {
   if (typeof window === 'undefined') return;
   try {
     localStorage.setItem(getKey(userKey), JSON.stringify([...set]));
@@ -30,13 +30,11 @@ function saveFavorites(userKey: string, set: Set<number>) {
 }
 
 /**
- * useFavorites now accepts a generic userKey:
- * - 'guest' for guest mode
- * - userId for web2
- * - wallet address for web3
+ * useFavorites accepts a userKey and supports string entry ids (e.g. "web2-123", "web3-5", "guest-456")
+ * for merged Web2+Web3 views.
  */
 export function useFavorites(userKey: string | undefined) {
-  const [favorites, setFavorites] = useState<Set<number>>(new Set());
+  const [favorites, setFavorites] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (!userKey) {
@@ -47,14 +45,14 @@ export function useFavorites(userKey: string | undefined) {
   }, [userKey]);
 
   const toggleFavorite = useCallback(
-    (entryIndex: number) => {
+    (entryId: string) => {
       if (!userKey) return;
       setFavorites((prev) => {
         const next = new Set(prev);
-        if (next.has(entryIndex)) {
-          next.delete(entryIndex);
+        if (next.has(entryId)) {
+          next.delete(entryId);
         } else {
-          next.add(entryIndex);
+          next.add(entryId);
         }
         saveFavorites(userKey, next);
         return next;
@@ -64,7 +62,7 @@ export function useFavorites(userKey: string | undefined) {
   );
 
   const isFavorite = useCallback(
-    (entryIndex: number) => favorites.has(entryIndex),
+    (entryId: string) => favorites.has(entryId),
     [favorites],
   );
 

@@ -34,19 +34,19 @@ export function SignInModal({ isOpen, onClose }: SignInModalProps) {
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/30 backdrop-blur-md"
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/30 backdrop-blur-md overflow-y-auto"
       onClick={onClose}
     >
       <motion.div
         initial={{ scale: 0.95, opacity: 0, y: 10 }}
         animate={{ scale: 1, opacity: 1, y: 0 }}
         transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-        className="liquid-glass w-full max-w-sm p-6 border-2 border-violet-200/50 dark:border-violet-600/40 shadow-2xl shadow-violet-900/20"
+        className="liquid-glass w-full max-w-sm max-h-[90dvh] overflow-y-auto p-4 sm:p-6 border-2 border-violet-200/50 dark:border-violet-600/40 shadow-2xl shadow-violet-900/20 my-auto"
         onClick={(e: React.MouseEvent) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex justify-between items-center mb-6">
-          <h3 className="text-lg font-semibold text-violet-900 dark:text-white">
+        <div className="flex justify-between items-center gap-2 mb-4 sm:mb-6">
+          <h3 className="text-base sm:text-lg font-semibold text-violet-900 dark:text-white">
             Sign in to save your journal
           </h3>
           <button

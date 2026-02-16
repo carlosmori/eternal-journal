@@ -9,23 +9,23 @@ export type ViewMode = 'list' | 'timeline' | 'grid' | 'calendar';
 interface DecryptedEntry {
   entry: JournalEntry;
   timestamp: number;
-  entryIndex: number;
+  entryIndex: number | string;
+  source?: 'guest' | 'web2' | 'web3';
 }
 
 interface JournalViewsProps {
   entries: DecryptedEntry[];
-  revealed: boolean;
-  isFavorite: (i: number) => boolean;
-  onToggleFavorite: (i: number) => void;
+  isFavorite: (id: number | string) => boolean;
+  onToggleFavorite: (id: number | string) => void;
   viewMode: ViewMode;
   onDaySelect?: (date: string) => void;
   selectedDay?: string | null;
   editable?: boolean;
-  onEdit?: (entryIndex: number, entry: JournalEntry) => void;
+  onEdit?: (entryIndex: number | string, entry: JournalEntry) => void;
   canDelete?: boolean;
-  onDelete?: (entryIndex: number) => void;
+  onDelete?: (entryIndex: number | string) => void;
   canSaveForever?: boolean;
-  onSaveForever?: (entryIndex: number, entry: JournalEntry) => void;
+  onSaveForever?: (entryIndex: number | string, entry: JournalEntry) => void;
 }
 
 const staggerContainer = {
@@ -40,7 +40,6 @@ const staggerItem = {
 
 function EntryCard({
   item,
-  revealed,
   isFavorite,
   onToggleFavorite,
   compact,
@@ -52,22 +51,20 @@ function EntryCard({
   onSaveForever,
 }: {
   item: DecryptedEntry;
-  revealed: boolean;
-  isFavorite: (i: number) => boolean;
-  onToggleFavorite: (i: number) => void;
+  isFavorite: (id: number | string) => boolean;
+  onToggleFavorite: (id: number | string) => void;
   compact?: boolean;
   editable?: boolean;
-  onEdit?: (entryIndex: number, entry: JournalEntry) => void;
+  onEdit?: (entryIndex: number | string, entry: JournalEntry) => void;
   canDelete?: boolean;
-  onDelete?: (entryIndex: number) => void;
+  onDelete?: (entryIndex: number | string) => void;
   canSaveForever?: boolean;
-  onSaveForever?: (entryIndex: number, entry: JournalEntry) => void;
+  onSaveForever?: (entryIndex: number | string, entry: JournalEntry) => void;
 }) {
   return (
     <QuoteCard
       entry={item.entry}
       timestamp={item.timestamp}
-      revealed={revealed}
       entryIndex={item.entryIndex}
       isFavorite={isFavorite(item.entryIndex)}
       onToggleFavorite={onToggleFavorite}
@@ -78,11 +75,12 @@ function EntryCard({
       onDelete={onDelete}
       canSaveForever={canSaveForever}
       onSaveForever={onSaveForever}
+      isForever={item.source === 'web3'}
     />
   );
 }
 
-export function JournalListView({ entries, revealed, isFavorite, onToggleFavorite, editable, onEdit, canDelete, onDelete, canSaveForever, onSaveForever }: JournalViewsProps) {
+export function JournalListView({ entries, isFavorite, onToggleFavorite, editable, onEdit, canDelete, onDelete, canSaveForever, onSaveForever }: JournalViewsProps) {
   return (
     <motion.div
       className="space-y-4"
@@ -94,7 +92,6 @@ export function JournalListView({ entries, revealed, isFavorite, onToggleFavorit
         <motion.div key={idx} variants={staggerItem}>
           <EntryCard
             item={item}
-            revealed={revealed}
             isFavorite={isFavorite}
             onToggleFavorite={onToggleFavorite}
             editable={editable}
@@ -110,7 +107,7 @@ export function JournalListView({ entries, revealed, isFavorite, onToggleFavorit
   );
 }
 
-export function JournalTimelineView({ entries, revealed, isFavorite, onToggleFavorite, editable, onEdit, canDelete, onDelete, canSaveForever, onSaveForever }: JournalViewsProps) {
+export function JournalTimelineView({ entries, isFavorite, onToggleFavorite, editable, onEdit, canDelete, onDelete, canSaveForever, onSaveForever }: JournalViewsProps) {
   return (
     <motion.div
       className="relative"
@@ -119,17 +116,16 @@ export function JournalTimelineView({ entries, revealed, isFavorite, onToggleFav
       variants={staggerContainer}
     >
       {/* Vertical line */}
-      <div className="absolute left-[11px] top-2 bottom-2 w-0.5 bg-violet-200/60 dark:bg-violet-700/40 rounded-full" />
+      <div className="absolute left-[5px] sm:left-[6px] top-2 bottom-2 w-0.5 bg-violet-200/60 dark:bg-violet-700/40 rounded-full" />
 
       <div className="space-y-0">
         {entries.map((item, idx) => (
-          <motion.div key={idx} variants={staggerItem} className="relative flex gap-6 pl-10">
+          <motion.div key={idx} variants={staggerItem} className="relative flex gap-4 sm:gap-6 pl-8 sm:pl-10">
             {/* Dot */}
-            <div className="absolute left-0 top-6 w-3 h-3 rounded-full bg-violet-500 dark:bg-violet-400 ring-4 ring-violet-100 dark:ring-violet-900/50" />
+            <div className="absolute left-0 top-6 w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-violet-500 dark:bg-violet-400 ring-4 ring-violet-100 dark:ring-violet-900/50" />
             <div className="flex-1 min-w-0 pb-8">
               <EntryCard
                 item={item}
-                revealed={revealed}
                 isFavorite={isFavorite}
                 onToggleFavorite={onToggleFavorite}
                 editable={editable}
@@ -147,7 +143,7 @@ export function JournalTimelineView({ entries, revealed, isFavorite, onToggleFav
   );
 }
 
-export function JournalGridView({ entries, revealed, isFavorite, onToggleFavorite, editable, onEdit, canDelete, onDelete, canSaveForever, onSaveForever }: JournalViewsProps) {
+export function JournalGridView({ entries, isFavorite, onToggleFavorite, editable, onEdit, canDelete, onDelete, canSaveForever, onSaveForever }: JournalViewsProps) {
   return (
     <motion.div
       className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"
@@ -159,7 +155,6 @@ export function JournalGridView({ entries, revealed, isFavorite, onToggleFavorit
         <motion.div key={idx} variants={staggerItem}>
           <EntryCard
             item={item}
-            revealed={revealed}
             isFavorite={isFavorite}
             onToggleFavorite={onToggleFavorite}
             compact
@@ -195,7 +190,6 @@ function toDateKey(year: number, month: number, day: number) {
 
 export function JournalCalendarView({
   entries,
-  revealed,
   isFavorite,
   onToggleFavorite,
   onDaySelect,
@@ -272,7 +266,6 @@ export function JournalCalendarView({
             <EntryCard
               key={idx}
               item={item}
-              revealed={revealed}
               isFavorite={isFavorite}
               onToggleFavorite={onToggleFavorite}
               editable={editable}

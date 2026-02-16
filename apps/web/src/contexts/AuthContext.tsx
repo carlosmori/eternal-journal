@@ -10,7 +10,6 @@ import {
 } from 'react';
 import { useAccount } from 'wagmi';
 import {
-  type AuthMode,
   type Web2User,
   getStoredTokens,
   storeTokens,
@@ -21,28 +20,22 @@ import {
 } from '@/lib/auth';
 
 interface AuthContextValue {
-  authMode: AuthMode;
   web2User: Web2User | null;
   jwt: string | null;
   isWeb2Loading: boolean;
+  isConnected: boolean;
+  address: string | undefined;
   loginWithGoogle: () => void;
   logoutWeb2: () => void;
-  setAuthMode: (mode: AuthMode) => void;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const { isConnected } = useAccount();
-  const [authMode, setAuthModeRaw] = useState<AuthMode>('guest');
+  const { isConnected, address } = useAccount();
   const [web2User, setWeb2User] = useState<Web2User | null>(null);
   const [jwt, setJwt] = useState<string | null>(null);
   const [isWeb2Loading, setIsWeb2Loading] = useState(false);
-
-  // Determine auth mode based on state
-  const setAuthMode = useCallback((mode: AuthMode) => {
-    setAuthModeRaw(mode);
-  }, []);
 
   // On mount: check for stored JWT tokens
   useEffect(() => {
@@ -53,10 +46,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         .then((user) => {
           setWeb2User(user);
           setJwt(accessToken);
-          setAuthModeRaw('web2');
         })
         .catch(async () => {
-          // Token expired, try refresh
           if (refreshToken) {
             try {
               const tokens = await refreshTokens(refreshToken);
@@ -64,7 +55,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               const user = await fetchMe(tokens.accessToken);
               setWeb2User(user);
               setJwt(tokens.accessToken);
-              setAuthModeRaw('web2');
             } catch {
               clearTokens();
             }
@@ -76,16 +66,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  // Auto-detect Web3 mode when wallet connects
-  useEffect(() => {
-    if (isConnected && authMode === 'guest') {
-      setAuthModeRaw('web3');
-    }
-    if (!isConnected && authMode === 'web3') {
-      setAuthModeRaw(web2User ? 'web2' : 'guest');
-    }
-  }, [isConnected, authMode, web2User]);
-
   const loginWithGoogle = useCallback(() => {
     window.location.href = getGoogleLoginUrl();
   }, []);
@@ -94,19 +74,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     clearTokens();
     setWeb2User(null);
     setJwt(null);
-    setAuthModeRaw(isConnected ? 'web3' : 'guest');
-  }, [isConnected]);
+  }, []);
 
   return (
     <AuthContext.Provider
       value={{
-        authMode,
         web2User,
         jwt,
         isWeb2Loading,
+        isConnected,
+        address,
         loginWithGoogle,
         logoutWeb2,
-        setAuthMode,
       }}
     >
       {children}

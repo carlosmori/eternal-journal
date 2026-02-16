@@ -2,11 +2,6 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
-import { useWriteContract, useReadContract, useWaitForTransactionReceipt } from 'wagmi';
-import { bytesToHex, formatEther } from 'viem';
-import { encryptEntry, estimateBytes, MAX_ENTRY_BYTES, type JournalEntry } from '@/lib/crypto';
-import { ETERNAL_JOURNAL_ABI, ETERNAL_JOURNAL_ADDRESS } from '@/lib/contract';
-import type { AuthMode } from '@/lib/auth';
 
 export interface EditingEntry {
   id: number;
@@ -19,8 +14,7 @@ interface AddQuoteModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: () => void;
-  mode: AuthMode;
-  encryptionKey?: Uint8Array | null;
+  mode: 'guest' | 'web2';
   editEntry?: EditingEntry | null;
   onGuestAdd?: (data: { date: string; title: string; description: string }) => void;
   onWeb2Add?: (data: { date: string; title: string; description: string }) => Promise<void>;
@@ -33,7 +27,6 @@ export function AddQuoteModal({
   onClose,
   onSuccess,
   mode,
-  encryptionKey,
   editEntry,
   onGuestAdd,
   onWeb2Add,
@@ -49,25 +42,6 @@ export function AddQuoteModal({
 
   const isEditing = !!editEntry;
 
-  // Web3-only hooks
-  const { writeContractAsync } = useWriteContract();
-  const { data: fee } = useReadContract({
-    address: ETERNAL_JOURNAL_ADDRESS,
-    abi: ETERNAL_JOURNAL_ABI,
-    functionName: 'fee',
-  });
-  const [txHash, setTxHash] = useState<`0x${string}` | undefined>();
-  const { isSuccess: txConfirmed } = useWaitForTransactionReceipt({ hash: txHash });
-  const hasCalledSuccessRef = useRef(false);
-
-  useEffect(() => {
-    if (txConfirmed && !hasCalledSuccessRef.current) {
-      hasCalledSuccessRef.current = true;
-      setLoading(false);
-      onSuccess();
-    }
-  }, [txConfirmed, onSuccess]);
-
   useEffect(() => {
     if (isOpen) {
       if (editEntry) {
@@ -81,8 +55,6 @@ export function AddQuoteModal({
         setDescription('');
       }
       setMessage('');
-      setTxHash(undefined);
-      hasCalledSuccessRef.current = false;
       setTimeout(() => titleRef.current?.focus(), 200);
     }
   }, [isOpen, editEntry]);
@@ -100,10 +72,6 @@ export function AddQuoteModal({
       document.body.style.overflow = '';
     };
   }, [isOpen, onClose]);
-
-  const currentEntry: JournalEntry = { date, title, description };
-  const byteEstimate = mode === 'web3' && (title || description) ? estimateBytes(currentEntry) : 0;
-  const isOverLimit = mode === 'web3' && byteEstimate > MAX_ENTRY_BYTES;
 
   const handleSubmit = async () => {
     if (!title.trim()) {
@@ -136,72 +104,29 @@ export function AddQuoteModal({
         return;
       }
 
-      if (mode === 'web2') {
-        if (isEditing && editEntry) {
-          await onWeb2Update?.(editEntry.id, entryData);
-        } else {
-          await onWeb2Add?.(entryData);
-        }
-        setLoading(false);
-        onSuccess();
-        return;
+      if (isEditing && editEntry) {
+        await onWeb2Update?.(editEntry.id, entryData);
+      } else {
+        await onWeb2Add?.(entryData);
       }
-
-      // Web3 mode (no editing, only add)
-      if (!encryptionKey) {
-        setMessage('Unlock the journal first.');
-        setLoading(false);
-        return;
-      }
-      if (isOverLimit) {
-        setMessage(`Entry exceeds the ${MAX_ENTRY_BYTES} byte limit.`);
-        setLoading(false);
-        return;
-      }
-      if (!fee) {
-        setMessage('Could not read contract fee.');
-        setLoading(false);
-        return;
-      }
-
-      const entry: JournalEntry = entryData;
-      const encrypted = encryptEntry(encryptionKey, entry);
-      const encryptedHex = bytesToHex(encrypted);
-
-      const hash = await writeContractAsync({
-        address: ETERNAL_JOURNAL_ADDRESS,
-        abi: ETERNAL_JOURNAL_ABI,
-        functionName: 'addEntry',
-        args: [encryptedHex],
-        value: fee,
-      });
-
-      setTxHash(hash);
-      setMessage('Transaction sent, waiting for confirmation...');
+      setLoading(false);
+      onSuccess();
     } catch (err: unknown) {
       const errorMsg = err instanceof Error ? err.message : 'Unknown error';
-      if (errorMsg.includes('User rejected') || errorMsg.includes('user rejected')) {
-        setMessage('Transaction cancelled by user.');
-      } else {
-        setMessage('Error saving: ' + errorMsg.slice(0, 100));
-      }
+      setMessage('Error saving: ' + errorMsg.slice(0, 100));
       setLoading(false);
     }
   };
 
-  const isSubmitDisabled =
-    loading ||
-    (mode === 'web3' && (isOverLimit || !encryptionKey));
+  const isSubmitDisabled = loading;
 
   const buttonLabel = loading
     ? 'Saving...'
     : isEditing
       ? 'Update entry'
-      : mode === 'web3'
-        ? 'Save forever'
-        : mode === 'web2'
-          ? 'Save entry'
-          : 'Save locally';
+      : mode === 'web2'
+        ? 'Save entry'
+        : 'Save locally';
 
   if (!isOpen) return null;
 
@@ -209,18 +134,18 @@ export function AddQuoteModal({
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/30 backdrop-blur-md"
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/30 backdrop-blur-md overflow-y-auto"
       onClick={onClose}
     >
       <motion.div
         initial={{ scale: 0.95, opacity: 0, y: 10 }}
         animate={{ scale: 1, opacity: 1, y: 0 }}
         transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-        className="liquid-glass w-full max-w-md p-6 border-2 border-violet-200/50 dark:border-violet-600/40 shadow-2xl shadow-violet-900/20"
+        className="liquid-glass w-full max-w-md max-h-[90dvh] overflow-y-auto p-4 sm:p-6 border-2 border-violet-200/50 dark:border-violet-600/40 shadow-2xl shadow-violet-900/20 my-auto"
         onClick={(e: React.MouseEvent) => e.stopPropagation()}
       >
-        <div className="flex justify-between items-center mb-4">
-          <h3 className="text-xl font-semibold text-violet-900 dark:text-white">
+        <div className="flex justify-between items-center gap-2 mb-4">
+          <h3 className="text-lg sm:text-xl font-semibold text-violet-900 dark:text-white truncate">
             {isEditing ? 'Edit entry' : 'Capture this moment'}
           </h3>
           <button
@@ -276,19 +201,11 @@ export function AddQuoteModal({
           </div>
         </div>
 
-        <div className="mt-3 flex justify-between text-xs text-violet-600 dark:text-violet-300">
-          <span className={isOverLimit ? 'text-red-500 dark:text-red-400 font-medium' : ''}>
-            {mode === 'web3' && byteEstimate > 0
-              ? `~${byteEstimate} / ${MAX_ENTRY_BYTES} bytes`
-              : ''}
-          </span>
-          {mode === 'web3' && fee && (
-            <span>Fee: {formatEther(fee)} ETH</span>
-          )}
-          {mode === 'guest' && !isEditing && (
-            <span className="text-amber-600 dark:text-amber-400">Saved on this device only</span>
-          )}
-        </div>
+        {mode === 'guest' && !isEditing && (
+          <div className="mt-3 text-xs text-amber-600 dark:text-amber-400">
+            Saved on this device only
+          </div>
+        )}
 
         {message && (
           <p className={`mt-2 text-sm ${message.includes('sent') ? 'text-violet-600 dark:text-violet-300' : 'text-red-500 dark:text-red-400'}`}>
