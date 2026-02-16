@@ -18,6 +18,9 @@ interface QuoteCardProps {
   canSaveForever?: boolean;
   onSaveForever?: (entryIndex: number | string, entry: JournalEntry) => void;
   isForever?: boolean;
+  isSharedWithCommunity?: boolean;
+  onShareToCommunity?: (entryIndex: number | string, entry: JournalEntry) => void;
+  onUnshareCommunity?: (entryIndex: number | string) => void;
 }
 
 function EditIcon() {
@@ -77,6 +80,16 @@ function ChevronUpIcon() {
   );
 }
 
+function GlobeIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="10" />
+      <path d="M2 12h20" />
+      <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+    </svg>
+  );
+}
+
 function HeartIcon({ filled }: { filled: boolean }) {
   return (
     <svg width="14" height="14" viewBox="0 0 24 24" fill={filled ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -85,7 +98,7 @@ function HeartIcon({ filled }: { filled: boolean }) {
   );
 }
 
-export function QuoteCard({ entry, timestamp, entryIndex = -1, isFavorite = false, onToggleFavorite, compact = false, editable = false, onEdit, canDelete = false, onDelete, canSaveForever = false, onSaveForever, isForever = false }: QuoteCardProps) {
+export function QuoteCard({ entry, timestamp, entryIndex = -1, isFavorite = false, onToggleFavorite, compact = false, editable = false, onEdit, canDelete = false, onDelete, canSaveForever = false, onSaveForever, isForever = false, isSharedWithCommunity = false, onShareToCommunity, onUnshareCommunity }: QuoteCardProps) {
   const [expanded, setExpanded] = useState(false);
 
   const blockDate = new Date(timestamp * 1000).toLocaleDateString('en-US', {
@@ -147,6 +160,15 @@ export function QuoteCard({ entry, timestamp, entryIndex = -1, isFavorite = fals
                   <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
                 </svg>
                 Eternal
+              </span>
+            )}
+            {isSharedWithCommunity && (
+              <span className="inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-md bg-emerald-100/80 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 border border-emerald-200/60 dark:border-emerald-700/40">
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="10" />
+                  <path d="M2 12h20" />
+                </svg>
+                Shared
               </span>
             )}
           </div>
@@ -238,6 +260,26 @@ export function QuoteCard({ entry, timestamp, entryIndex = -1, isFavorite = fals
               >
                 <TrashIcon />
                 Delete
+              </button>
+            )}
+            {isSharedWithCommunity && onUnshareCommunity && entryIndex != null && entryIndex !== '' && (
+              <button
+                onClick={() => onUnshareCommunity(entryIndex)}
+                className="flex items-center gap-1.5 px-2.5 sm:px-3 py-2 sm:py-1.5 rounded-lg text-xs font-medium text-emerald-600 dark:text-emerald-400 hover:bg-emerald-100/50 dark:hover:bg-emerald-900/20 transition-colors"
+                title="Remove from community"
+              >
+                <GlobeIcon />
+                Unshare
+              </button>
+            )}
+            {!isSharedWithCommunity && onShareToCommunity && entryIndex != null && entryIndex !== '' && (
+              <button
+                onClick={() => onShareToCommunity(entryIndex, entry)}
+                className="flex items-center gap-1.5 px-2.5 sm:px-3 py-2 sm:py-1.5 rounded-lg text-xs font-medium text-emerald-600 dark:text-emerald-400 hover:bg-emerald-100/50 dark:hover:bg-emerald-900/20 transition-colors"
+                title="Share with community"
+              >
+                <GlobeIcon />
+                Community
               </button>
             )}
             <button

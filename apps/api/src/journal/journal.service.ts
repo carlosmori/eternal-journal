@@ -1,45 +1,84 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import type { JournalEntry } from '@prisma/client';
+import { JournalCryptoService } from './journal-crypto.service';
+
+export interface JournalEntryDto {
+  id: string;
+  date: string;
+  title: string;
+  description: string;
+  timestamp: number;
+  createdAt: Date;
+}
 
 @Injectable()
 export class JournalService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private crypto: JournalCryptoService,
+  ) {}
 
-  async getAllByUser(googleId: string): Promise<JournalEntry[]> {
+  async getAllByUser(googleId: string): Promise<JournalEntryDto[]> {
     const user = await this.prisma.user.findUnique({
       where: { googleId },
     });
     if (!user) return [];
-    return this.prisma.journalEntry.findMany({
+
+    const rows = await this.prisma.journalEntry.findMany({
       where: { userId: user.id },
       orderBy: { createdAt: 'desc' },
+    });
+
+    return rows.map((row) => {
+      const plain = this.crypto.decrypt(row.ciphertext);
+      return {
+        id: row.id,
+        date: plain.date,
+        title: plain.title,
+        description: plain.description,
+        timestamp: row.timestamp,
+        createdAt: row.createdAt,
+      };
     });
   }
 
   async create(
     googleId: string,
     data: { date: string; title: string; description: string },
-  ): Promise<JournalEntry> {
+  ): Promise<JournalEntryDto> {
     const user = await this.prisma.user.findUniqueOrThrow({
       where: { googleId },
     });
-    return this.prisma.journalEntry.create({
+
+    const ciphertext = this.crypto.encrypt({
+      date: data.date,
+      title: data.title,
+      description: data.description,
+    });
+
+    const row = await this.prisma.journalEntry.create({
       data: {
         userId: user.id,
-        date: data.date,
-        title: data.title,
-        description: data.description,
+        ciphertext,
         timestamp: Math.floor(Date.now() / 1000),
       },
     });
+
+    return {
+      id: row.id,
+      date: data.date,
+      title: data.title,
+      description: data.description,
+      timestamp: row.timestamp,
+      createdAt: row.createdAt,
+    };
   }
 
   async update(
     googleId: string,
     entryId: string,
     data: Partial<{ date: string; title: string; description: string }>,
-  ): Promise<JournalEntry | null> {
+  ): Promise<JournalEntryDto | null> {
     const user = await this.prisma.user.findUnique({
       where: { googleId },
     });
@@ -50,10 +89,29 @@ export class JournalService {
     });
     if (!entry) return null;
 
-    return this.prisma.journalEntry.update({
+    // Decrypt current values, merge with updates, re-encrypt
+    const current = this.crypto.decrypt(entry.ciphertext);
+    const merged = {
+      date: data.date ?? current.date,
+      title: data.title ?? current.title,
+      description: data.description ?? current.description,
+    };
+
+    const ciphertext = this.crypto.encrypt(merged);
+
+    const row = await this.prisma.journalEntry.update({
       where: { id: entryId },
-      data,
+      data: { ciphertext },
     });
+
+    return {
+      id: row.id,
+      date: merged.date,
+      title: merged.title,
+      description: merged.description,
+      timestamp: row.timestamp,
+      createdAt: row.createdAt,
+    };
   }
 
   async delete(googleId: string, entryId: string): Promise<boolean> {

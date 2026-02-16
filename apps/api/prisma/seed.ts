@@ -1,6 +1,25 @@
 import { PrismaClient } from '@prisma/client';
+import { createCipheriv, createHash, randomBytes } from 'crypto';
 
 const prisma = new PrismaClient();
+
+const ALGORITHM = 'aes-256-gcm';
+const IV_LENGTH = 12;
+const AUTH_TAG_LENGTH = 16;
+
+function encryptEntry(
+  key: Buffer,
+  data: { date: string; title: string; description: string },
+): string {
+  const plaintext = Buffer.from(JSON.stringify(data), 'utf-8');
+  const iv = randomBytes(IV_LENGTH);
+  const cipher = createCipheriv(ALGORITHM, key, iv, {
+    authTagLength: AUTH_TAG_LENGTH,
+  });
+  const encrypted = Buffer.concat([cipher.update(plaintext), cipher.final()]);
+  const authTag = cipher.getAuthTag();
+  return Buffer.concat([iv, encrypted, authTag]).toString('base64');
+}
 
 const SAMPLE_ENTRIES = [
   {
@@ -111,27 +130,43 @@ const SAMPLE_ENTRIES = [
 ];
 
 async function main() {
+  const encryptionKey = process.env.JOURNAL_ENCRYPTION_KEY;
+  if (!encryptionKey) {
+    console.log('JOURNAL_ENCRYPTION_KEY not set. Skipping seed.');
+    return;
+  }
+  const key = createHash('sha256').update(encryptionKey).digest();
+
   const users = await prisma.user.findMany();
 
   if (users.length === 0) {
-    console.log('No hay usuarios en la base de datos. Hacé login primero para crear uno.');
+    console.log(
+      'No hay usuarios en la base de datos. Hacé login primero para crear uno.',
+    );
     return;
   }
 
   for (const user of users) {
-    const existingCount = await prisma.journalEntry.count({ where: { userId: user.id } });
+    const existingCount = await prisma.journalEntry.count({
+      where: { userId: user.id },
+    });
     if (existingCount > 0) {
-      console.log(`⊘ User ${user.email} ya tiene ${existingCount} entradas. Saltando.`);
+      console.log(
+        `⊘ User ${user.email} ya tiene ${existingCount} entradas. Saltando.`,
+      );
       continue;
     }
 
     for (const entry of SAMPLE_ENTRIES) {
+      const ciphertext = encryptEntry(key, {
+        date: entry.date,
+        title: entry.title,
+        description: entry.description,
+      });
       await prisma.journalEntry.create({
         data: {
           userId: user.id,
-          date: entry.date,
-          title: entry.title,
-          description: entry.description,
+          ciphertext,
           timestamp: entry.timestamp,
         },
       });

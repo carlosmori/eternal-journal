@@ -8,24 +8,37 @@ datasource db {
 }
 
 model User {
-  id        String         @id @default(cuid())
-  googleId  String         @unique
-  email     String
-  name      String
-  picture   String?
-  createdAt DateTime       @default(now())
-  entries   JournalEntry[]
+  id           String         @id @default(cuid())
+  googleId     String         @unique
+  email        String
+  name         String
+  picture      String?
+  createdAt    DateTime       @default(now())
+  entries      JournalEntry[]
+  sharedQuotes SharedQuote[]
 }
 
 model JournalEntry {
-  id          String   @id @default(cuid())
-  userId      String
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  date        String
-  title       String
-  description String
-  timestamp   Int
-  createdAt   DateTime @default(now())
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ciphertext String   // Base64 AES-256-GCM: IV + encrypted { date, title, description } + auth tag
+  timestamp  Int
+  createdAt  DateTime @default(now())
 
   @@index([userId])
+}
+
+model SharedQuote {
+  id            String    @id @default(cuid())
+  ciphertext    String    // AES-256-GCM encrypted with ADMIN_ENCRYPTION_SEED
+  sourceEntryId String?
+  userId        String
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  status        String    @default("PENDING") // PENDING | APPROVED | REJECTED
+  createdAt     DateTime  @default(now())
+  reviewedAt    DateTime?
+
+  @@unique([userId, sourceEntryId])
+  @@index([status])
 }

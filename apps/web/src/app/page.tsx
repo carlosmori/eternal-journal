@@ -6,6 +6,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { Tutorial } from '@/components/Tutorial';
+import { CommunityQuote } from '@/components/CommunityQuote';
 
 const UniverseScene = dynamic(() => import('@/components/UniverseScene'), {
   ssr: false,
@@ -83,6 +84,9 @@ export default function HomePage() {
 
       {/* Hero content - single card with flip + reveal */}
       <div className="relative z-10 min-h-screen flex flex-col items-center justify-end pb-14 md:pb-24 px-4 [perspective:1200px]">
+        {/* Community quote above hero */}
+        {mounted && !isOpening && <CommunityQuote />}
+
         <motion.div
           initial={{ opacity: 0, y: 32 }}
           animate={{
@@ -127,7 +131,7 @@ export default function HomePage() {
                   transition={{ type: 'spring', stiffness: 400, damping: 17 }}
                   className="glass-button px-10 py-3.5 text-lg shadow-lg shadow-violet-500/20"
                 >
-                  Open your journal
+                  Start writing
                 </motion.button>
 
                 <div className="mt-8 flex flex-wrap justify-center gap-6 text-sm text-violet-600 dark:text-violet-400">

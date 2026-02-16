@@ -26,6 +26,9 @@ interface JournalViewsProps {
   onDelete?: (entryIndex: number | string) => void;
   canSaveForever?: boolean;
   onSaveForever?: (entryIndex: number | string, entry: JournalEntry) => void;
+  isSharedWithCommunity?: (entryIndex: number | string) => boolean;
+  onShareToCommunity?: (entryIndex: number | string, entry: JournalEntry) => void;
+  onUnshareCommunity?: (entryIndex: number | string) => void;
 }
 
 const staggerContainer = {
@@ -35,7 +38,7 @@ const staggerContainer = {
 
 const staggerItem = {
   hidden: { opacity: 0, y: 12 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.3, ease: 'easeOut' } },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.3, ease: 'easeOut' as const } },
 };
 
 function EntryCard({
@@ -49,6 +52,9 @@ function EntryCard({
   onDelete,
   canSaveForever,
   onSaveForever,
+  isSharedWithCommunity,
+  onShareToCommunity,
+  onUnshareCommunity,
 }: {
   item: DecryptedEntry;
   isFavorite: (id: number | string) => boolean;
@@ -60,7 +66,11 @@ function EntryCard({
   onDelete?: (entryIndex: number | string) => void;
   canSaveForever?: boolean;
   onSaveForever?: (entryIndex: number | string, entry: JournalEntry) => void;
+  isSharedWithCommunity?: (entryIndex: number | string) => boolean;
+  onShareToCommunity?: (entryIndex: number | string, entry: JournalEntry) => void;
+  onUnshareCommunity?: (entryIndex: number | string) => void;
 }) {
+  const showCommunity = item.source === 'web2' || item.source === 'web3';
   return (
     <QuoteCard
       entry={item.entry}
@@ -76,11 +86,14 @@ function EntryCard({
       canSaveForever={canSaveForever}
       onSaveForever={onSaveForever}
       isForever={item.source === 'web3'}
+      isSharedWithCommunity={showCommunity && isSharedWithCommunity ? isSharedWithCommunity(item.entryIndex) : false}
+      onShareToCommunity={showCommunity ? onShareToCommunity : undefined}
+      onUnshareCommunity={showCommunity ? onUnshareCommunity : undefined}
     />
   );
 }
 
-export function JournalListView({ entries, isFavorite, onToggleFavorite, editable, onEdit, canDelete, onDelete, canSaveForever, onSaveForever }: JournalViewsProps) {
+export function JournalListView({ entries, isFavorite, onToggleFavorite, editable, onEdit, canDelete, onDelete, canSaveForever, onSaveForever, isSharedWithCommunity, onShareToCommunity, onUnshareCommunity }: JournalViewsProps) {
   return (
     <motion.div
       className="space-y-4"
@@ -100,6 +113,9 @@ export function JournalListView({ entries, isFavorite, onToggleFavorite, editabl
             onDelete={onDelete}
             canSaveForever={canSaveForever}
             onSaveForever={onSaveForever}
+            isSharedWithCommunity={isSharedWithCommunity}
+            onShareToCommunity={onShareToCommunity}
+            onUnshareCommunity={onUnshareCommunity}
           />
         </motion.div>
       ))}
@@ -107,7 +123,7 @@ export function JournalListView({ entries, isFavorite, onToggleFavorite, editabl
   );
 }
 
-export function JournalTimelineView({ entries, isFavorite, onToggleFavorite, editable, onEdit, canDelete, onDelete, canSaveForever, onSaveForever }: JournalViewsProps) {
+export function JournalTimelineView({ entries, isFavorite, onToggleFavorite, editable, onEdit, canDelete, onDelete, canSaveForever, onSaveForever, isSharedWithCommunity, onShareToCommunity, onUnshareCommunity }: JournalViewsProps) {
   return (
     <motion.div
       className="relative"
@@ -134,6 +150,9 @@ export function JournalTimelineView({ entries, isFavorite, onToggleFavorite, edi
                 onDelete={onDelete}
                 canSaveForever={canSaveForever}
                 onSaveForever={onSaveForever}
+                isSharedWithCommunity={isSharedWithCommunity}
+                onShareToCommunity={onShareToCommunity}
+                onUnshareCommunity={onUnshareCommunity}
               />
             </div>
           </motion.div>
@@ -143,7 +162,7 @@ export function JournalTimelineView({ entries, isFavorite, onToggleFavorite, edi
   );
 }
 
-export function JournalGridView({ entries, isFavorite, onToggleFavorite, editable, onEdit, canDelete, onDelete, canSaveForever, onSaveForever }: JournalViewsProps) {
+export function JournalGridView({ entries, isFavorite, onToggleFavorite, editable, onEdit, canDelete, onDelete, canSaveForever, onSaveForever, isSharedWithCommunity, onShareToCommunity, onUnshareCommunity }: JournalViewsProps) {
   return (
     <motion.div
       className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"
@@ -164,6 +183,9 @@ export function JournalGridView({ entries, isFavorite, onToggleFavorite, editabl
             onDelete={onDelete}
             canSaveForever={canSaveForever}
             onSaveForever={onSaveForever}
+            isSharedWithCommunity={isSharedWithCommunity}
+            onShareToCommunity={onShareToCommunity}
+            onUnshareCommunity={onUnshareCommunity}
           />
         </motion.div>
       ))}
@@ -200,6 +222,9 @@ export function JournalCalendarView({
   onDelete,
   canSaveForever,
   onSaveForever,
+  isSharedWithCommunity,
+  onShareToCommunity,
+  onUnshareCommunity,
 }: JournalViewsProps) {
   const now = new Date();
   const [year, month] = [now.getFullYear(), now.getMonth()];
@@ -274,6 +299,9 @@ export function JournalCalendarView({
               onDelete={onDelete}
               canSaveForever={canSaveForever}
               onSaveForever={onSaveForever}
+              isSharedWithCommunity={isSharedWithCommunity}
+              onShareToCommunity={onShareToCommunity}
+              onUnshareCommunity={onUnshareCommunity}
             />
           ))}
         </motion.div>
