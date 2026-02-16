@@ -106,50 +106,46 @@ export default function JournalPage() {
 
       const totalPages = Math.ceil(count / PAGE_SIZE);
       const safePage = Math.min(page, Math.max(0, totalPages - 1));
-      const startIdx = Math.max(0, count - 1 - safePage * PAGE_SIZE);
-      const endIdx = Math.max(0, count - 1 - (safePage + 1) * PAGE_SIZE + 1);
+
+      // Calculate the range for this page (newest first).
+      // Page 0 = newest entries, page N = oldest entries.
+      // getEntries(user, start, end) returns entries[start..end] inclusive, ascending.
+      const pageEndIdx = count - 1 - safePage * PAGE_SIZE;
+      const pageStartIdx = Math.max(0, pageEndIdx - PAGE_SIZE + 1);
 
       setIsLoading(true);
       setError('');
 
       try {
+        // Single batch call instead of N individual getEntry calls
+        const results = await sepoliaPublicClient.readContract({
+          address: ETERNAL_JOURNAL_ADDRESS,
+          abi: ETERNAL_JOURNAL_ABI,
+          functionName: 'getEntries',
+          args: [address, BigInt(pageStartIdx), BigInt(pageEndIdx)],
+        });
+
+        const batchResults = results as readonly {
+          timestamp: bigint;
+          ciphertext: `0x${string}`;
+        }[];
+
         const decrypted: DecryptedEntry[] = [];
-        const batchSize = 10;
 
-        for (let i = startIdx; i >= endIdx; i -= batchSize) {
-          const batch = [];
-          for (let j = i; j > Math.max(endIdx - 1, i - batchSize); j--) {
-            batch.push(
-              sepoliaPublicClient.readContract({
-                address: ETERNAL_JOURNAL_ADDRESS,
-                abi: ETERNAL_JOURNAL_ABI,
-                functionName: 'getEntry',
-                args: [address, BigInt(j)],
-              })
-            );
-          }
-
-          const results = await Promise.all(batch);
-
-          let resultIdx = 0;
-          for (const result of results) {
-            const entryIndex = i - resultIdx;
-            try {
-              const { timestamp, ciphertext } = result as {
-                timestamp: bigint;
-                ciphertext: `0x${string}`;
-              };
-              const ciphertextBytes = hexToBytes(ciphertext);
-              const entry = decryptEntry(encryptionKey, ciphertextBytes);
-              decrypted.push({
-                entry,
-                timestamp: Number(timestamp),
-                entryIndex,
-              });
-            } catch {
-              console.warn('Could not decrypt an entry');
-            }
-            resultIdx++;
+        // Results come in ascending order (start..end), reverse for newest-first display
+        for (let i = batchResults.length - 1; i >= 0; i--) {
+          const entryIndex = pageStartIdx + i;
+          try {
+            const { timestamp, ciphertext } = batchResults[i];
+            const ciphertextBytes = hexToBytes(ciphertext);
+            const entry = decryptEntry(encryptionKey, ciphertextBytes);
+            decrypted.push({
+              entry,
+              timestamp: Number(timestamp),
+              entryIndex,
+            });
+          } catch {
+            console.warn('Could not decrypt an entry');
           }
         }
 
