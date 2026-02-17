@@ -32,7 +32,8 @@ Prisma is the ORM (Object-Relational Mapper) that sits between the NestJS API an
 | Model | Purpose | Key fields |
 |-------|---------|------------|
 | **User** | Google OAuth users | `id` (cuid), `googleId` (unique), `email`, `name`, `picture` |
-| **JournalEntry** | Journal entries per user | `id` (cuid), `userId` (FK), `date`, `title`, `description`, `timestamp` |
+| **JournalEntry** | Encrypted journal entries per user | `id` (cuid), `userId` (FK), `ciphertext` (Base64 AES-256-GCM encrypted), `timestamp` |
+| **SharedQuote** | Anonymously shared quotes for community | `id` (cuid), `userId` (FK), `ciphertext` (admin-encrypted), `sourceEntryId`, `status` (PENDING/APPROVED/REJECTED) |
 
 ---
 

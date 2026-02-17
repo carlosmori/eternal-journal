@@ -6,6 +6,7 @@ import { PrismaModule } from './prisma/prisma.module';
 import { AuthModule } from './auth/auth.module';
 import { JournalModule } from './journal/journal.module';
 import { SharedQuotesModule } from './shared-quotes/shared-quotes.module';
+import { HealthController } from './health.controller';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { SharedQuotesModule } from './shared-quotes/shared-quotes.module';
     JournalModule,
     SharedQuotesModule,
   ],
+  controllers: [HealthController],
   providers: [
     {
       provide: APP_GUARD,

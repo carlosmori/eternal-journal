@@ -9,8 +9,9 @@ async function bootstrap() {
     origin: process.env.FRONTEND_URL || 'http://localhost:3000',
     credentials: true,
   });
-  await app.listen(3001);
-  console.log('Eternal Journal API en http://localhost:3001');
+  const port = process.env.PORT || 3001;
+  await app.listen(port);
+  console.log(`Eternal Journal API running on port ${port}`);
 }
 
 bootstrap();

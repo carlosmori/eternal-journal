@@ -1,9 +1,13 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  output: 'standalone',
   async rewrites() {
-    return [
-      { source: '/api/journal', destination: 'http://localhost:3001/journal' },
-    ];
+    if (process.env.NODE_ENV === 'development') {
+      return [
+        { source: '/api/journal', destination: 'http://localhost:3001/journal' },
+      ];
+    }
+    return [];
   },
   webpack: (config, { isServer }) => {
     config.resolve.fallback = {
