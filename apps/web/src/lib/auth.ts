@@ -1,6 +1,6 @@
 export type AuthMode = 'guest' | 'web2' | 'web3';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+const API_URL = '/api/backend';
 
 const TOKEN_KEY = 'eternal-journal-jwt';
 const REFRESH_KEY = 'eternal-journal-refresh';
