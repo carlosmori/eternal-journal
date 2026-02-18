@@ -13,7 +13,7 @@ applications:
             - env | grep -e NEXT_PUBLIC_ >> .env.production
             - env | grep -e BACKEND_URL >> .env.production
             - yarn build
-            - cp .env.production .next/standalone/apps/web/.env.production
+            - cp .env.production "$(dirname "$(find .next/standalone -name server.js -maxdepth 3 | head -1)")"/.env.production
       artifacts:
         baseDirectory: .next
         files:
