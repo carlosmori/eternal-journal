@@ -67,7 +67,8 @@ async function proxy(req: NextRequest, { params }: { params: Promise<{ path: str
       body,
       redirect: 'manual',
     });
-  } catch {
+  } catch (err) {
+    console.error('[proxy] fetch failed:', target.toString(), err);
     return NextResponse.json({ error: 'Backend unavailable' }, { status: 502 });
   }
 
