@@ -28,6 +28,8 @@ const FORWARDED_REQ_HEADERS = ['authorization', 'content-type', 'cookie', 'accep
 
 const HOP_BY_HOP = new Set([
   'transfer-encoding',
+  'content-length',
+  'content-encoding',
   'connection',
   'keep-alive',
   'proxy-authenticate',
