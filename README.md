@@ -1,71 +1,177 @@
 # Eternal Journal
 
-Journal on the blockchain. MVP with Next.js, NestJS and TypeScript.
+A personal journaling app where every entry is encrypted and private. It works like any normal web app -- sign in with Google, write, done. But it also lets you save entries on the blockchain so they last forever, immutably, without depending on any server.
 
-**New to the project?** Read [docs/PROJECT-OVERVIEW.md](docs/PROJECT-OVERVIEW.md) for a quick understanding of the app, architecture, and tech stack.
+Web3 is an optional feature, not the main path. The app is fully functional as a traditional Web2 application. Blockchain integration exists for users who want permanent, immutable storage, but since connecting a wallet adds friction for the average user, it's simply an extra capability.
 
-## Structure
+There are three ways to use it:
+
+| Mode | Auth | Storage | Editable |
+|------|------|---------|----------|
+| **Guest** | None | Browser localStorage | Yes |
+| **Web2** | Google OAuth | PostgreSQL (encrypted) | Yes |
+| **Web3** | Wallet (RainbowKit) | Base blockchain (encrypted) | No (immutable) |
+
+The app also has a community feature: users can share anonymous quotes from their journal entries, which go through admin moderation before appearing on the landing page.
+
+## Web2 + Web3: how they coexist
+
+Both paths live in the same UI. A user can use one, the other, or both at the same time. The frontend merges entries from all sources into a single unified view.
+
+**Web2 path** -- Google OAuth produces a JWT. Entries are encrypted server-side with AES-256-GCM and stored in PostgreSQL via Prisma. Full CRUD: create, read, update, delete. Guest entries can be migrated to Web2 on sign-in.
+
+**Web3 path** -- The user connects a wallet via RainbowKit. To derive an encryption key, the app asks the user to sign a deterministic message. That signature is hashed with SHA-256 to produce an AES-256 key. Entries are encrypted client-side with AES-256-GCM, encoded to raw bytes, and stored directly on-chain on Base (pure on-chain, no IPFS). These entries are immutable -- they cannot be edited or deleted.
+
+```mermaid
+flowchart LR
+    subgraph frontend ["Frontend (Next.js)"]
+        UI[Journal UI]
+    end
+
+    subgraph web2 ["Web2 Path"]
+        Google[Google OAuth]
+        API[NestJS API]
+        DB[(PostgreSQL)]
+    end
+
+    subgraph web3 ["Web3 Path"]
+        Wallet[Wallet via RainbowKit]
+        Contract[Smart Contract]
+        Base[(Base Blockchain)]
+    end
+
+    UI -->|Sign in with Google| Google
+    Google -->|JWT| API
+    API -->|AES-256-GCM encrypted| DB
+
+    UI -->|Connect wallet| Wallet
+    Wallet -->|Sign message, derive key| Contract
+    Contract -->|Encrypted bytes| Base
+```
+
+## Tech Stack
+
+Monorepo managed with Yarn workspaces:
 
 ```
+eternal-journal/
 ├── apps/
-│   ├── web/     # Next.js 15 + React + Tailwind
-│   └── api/     # NestJS 11 + TypeScript
-├── contracts/   # Solidity smart contract (Hardhat)
+│   ├── web/        # Next.js 14 · React 18 · Tailwind CSS · Framer Motion · Three.js · Wagmi / Viem / RainbowKit
+│   └── api/        # NestJS 11 · Prisma 6 · PostgreSQL 16 · Passport (Google OAuth + JWT)
+├── contracts/      # Solidity ^0.8.28 · Hardhat · OpenZeppelin (UUPS upgradeable)
+└── docs/           # Architecture and setup documentation
 ```
 
-## Run
+### Smart Contract
 
-### Con Docker (recomendado)
+The on-chain storage is handled by `EternalJournalPureOnChainV2.sol`, an upgradeable contract using the **UUPS proxy pattern** (OpenZeppelin). This allows fixing bugs or adding features without losing state or changing the contract address.
 
-1. **Levantar PostgreSQL:**
-   ```bash
-   docker run -d --name eternal-journal-db \
-     -p 5432:5432 \
-     -e POSTGRES_PASSWORD=postgres \
-     -e POSTGRES_DB=eternal_journal \
-     postgres:16
-   ```
+- **Encoding**: entries are encrypted client-side (AES-256-GCM) and encoded to **raw bytes** before being sent to the contract. The contract stores opaque byte arrays (max 1024 bytes per entry).
+- **Multisig ownership**: the contract is owned by a **Safe multisig**, not an individual wallet. This protects against private key loss and requires multiple signatures for admin operations (upgrade, pause, withdraw fees, change fee amount).
+- **Access control**: roles are separated (PAUSER_ROLE, UPGRADER_ROLE, FEE_MANAGER_ROLE) to limit what each signer can do.
+- **Fee**: 0.00005 ETH per entry. Fees accumulate in the contract and are withdrawn through the multisig.
+- **Network**: Base (Ethereum L2) -- Base Sepolia for testnet, Base mainnet for production.
 
-2. **Configurar y migrar:**
-   ```bash
-   cp apps/api/.env.example apps/api/.env
-   # Editar apps/api/.env con tus credenciales de Google OAuth (GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET)
+## AWS Architecture
 
-   cd apps/api && npx prisma migrate dev --name init
-   cd ../..
-   ```
+```mermaid
+flowchart TB
+    Browser[Browser]
 
-3. **Instalar y ejecutar:**
-   ```bash
-   yarn install
-   yarn dev
-   ```
+    subgraph amplify ["AWS Amplify"]
+        NextJS["Next.js (standalone)"]
+        Proxy["Reverse Proxy\n/api/backend/*"]
+    end
 
-### Sin Docker
+    subgraph ecs ["Amazon ECS"]
+        ALB[Application Load Balancer]
+        API1[API Container]
+        API2[API Container]
+    end
+
+    ECR[Amazon ECR]
+    RDS[(Amazon RDS\nPostgreSQL 16)]
+    Secrets[AWS Secrets Manager]
+
+    Browser -->|HTTPS| NextJS
+    NextJS -->|Server-side requests| Proxy
+    Proxy -->|Forwards to backend| ALB
+    ALB --> API1
+    ALB --> API2
+    ECR -.->|Docker images| ecs
+    API1 --> RDS
+    API2 --> RDS
+    Secrets -.->|DATABASE_URL, etc.| ecs
+```
+
+### Frontend -- AWS Amplify
+
+The Next.js app is hosted on **AWS Amplify**, which builds it as a standalone output (configured in `amplify.yml`).
+
+The frontend includes a **reverse proxy** route at `apps/web/src/app/api/backend/[...path]/route.ts`. All API requests from the browser go to `/api/backend/*`, which forwards them server-side from the Next.js API routes to the NestJS backend. The browser never talks directly to the backend URL. This keeps the backend origin private and allows controlled forwarding of headers and cookies. Routes are whitelisted -- only known endpoints are proxied.
+
+### Backend -- Amazon ECS
+
+The NestJS API runs as Docker containers on **Amazon ECS**, with an **Application Load Balancer (ALB)** in front to distribute traffic across container instances. Docker images are stored in **Amazon ECR**.
+
+The database is **Amazon RDS** running PostgreSQL 16. Connection strings and other secrets are stored in **AWS Secrets Manager**.
+
+### CI/CD -- GitHub Actions
+
+The deployment pipeline (`.github/workflows/deploy.yml`) handles:
+
+1. **Prisma migrations** -- runs automatically when the schema changes
+2. **Docker build & push** -- builds API and Web images and pushes them to ECR
+3. **Deploy to staging** -- automatic on every push
+4. **Deploy to production** -- requires manual approval
+
+## Local Development
+
+### With Docker (recommended)
+
+1. **Start PostgreSQL:**
+
+```bash
+docker run -d --name eternal-journal-db \
+  -p 5432:5432 \
+  -e POSTGRES_PASSWORD=postgres \
+  -e POSTGRES_DB=eternal_journal \
+  postgres:16
+```
+
+2. **Configure and migrate:**
+
+```bash
+cp apps/api/.env.example apps/api/.env
+# Edit apps/api/.env with your Google OAuth credentials (GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET)
+
+cd apps/api && npx prisma migrate dev --name init
+cd ../..
+```
+
+3. **Install and run:**
 
 ```bash
 yarn install
 yarn dev
 ```
 
-> Requiere PostgreSQL corriendo en `localhost:5432` con base `eternal_journal`. Ver [docs/DATABASE-SETUP.md](docs/DATABASE-SETUP.md).
+### Without Docker
+
+```bash
+yarn install
+yarn dev
+```
+
+> Requires PostgreSQL running on `localhost:5432` with database `eternal_journal`. See [docs/DATABASE-SETUP.md](docs/DATABASE-SETUP.md).
 
 ---
 
 - **Frontend**: http://localhost:3000
 - **API**: http://localhost:3001
 
-## Flow
+## Documentation
 
-1. **Home** (`/`): Welcome screen with "Enter" button
-2. **Journal** (`/journal`): List of entries (blurred by default, click to reveal) + "Add entry" button (top right) that opens the modal
-
-## Technologies
-
-- **Frontend**: Next.js 15, React 19, Tailwind CSS, liquid glass style, violet palette, dark/light mode
-- **Backend**: NestJS 11, TypeScript
-- **Blockchain**: wagmi, viem, RainbowKit, Base Sepolia (https://sepolia.base.org)
-
-## Blockchain
-
-Connect your wallet on Sepolia. See [docs/README-BLOCKCHAIN.md](docs/README-BLOCKCHAIN.md) for configuration and usage.
+- [docs/PROJECT-OVERVIEW.md](docs/PROJECT-OVERVIEW.md) -- High-level architecture and data flow
+- [docs/README-BLOCKCHAIN.md](docs/README-BLOCKCHAIN.md) -- Blockchain setup, encryption details, costs
+- [docs/DATABASE-SETUP.md](docs/DATABASE-SETUP.md) -- PostgreSQL setup for dev, staging, and production
