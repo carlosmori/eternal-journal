@@ -116,14 +116,40 @@ The NestJS API runs as Docker containers on **Amazon ECS**, with an **Applicatio
 
 The database is **Amazon RDS** running PostgreSQL 16. Connection strings and other secrets are stored in **AWS Secrets Manager**.
 
-### CI/CD -- GitHub Actions
+### CI -- Pull Request Checks
 
-The deployment pipeline (`.github/workflows/deploy.yml`) handles:
+Every pull request against `main` triggers `.github/workflows/ci.yml`:
 
-1. **Prisma migrations** -- runs automatically when the schema changes
-2. **Docker build & push** -- builds API and Web images and pushes them to ECR
-3. **Deploy to staging** -- automatic on every push
-4. **Deploy to production** -- requires manual approval
+- **Lint** -- ESLint on API and Web
+- **Typecheck** -- `tsc --noEmit` on API and Web
+- **Build** -- full `yarn build` to catch compilation errors
+- **Test API** -- Jest unit tests for the NestJS backend
+- **Test Web** -- Jest unit tests for the Next.js frontend
+- **Test Contracts** -- Hardhat tests for smart contracts
+
+All checks must pass before merging (configure under repo Settings > Branch protection rules > `main` > Require status checks).
+
+### CD -- Deployment
+
+**Frontend**: AWS Amplify builds and deploys the Next.js app automatically on push to `main` (configured in `amplify.yml`).
+
+**Backend**: `.github/workflows/deploy.yml` handles the API:
+
+1. **Build & push** -- Docker image built and pushed to ECR (tagged with commit SHA)
+2. **Deploy to staging** -- Prisma migrations (if schema changed) + ECS service update + smoke test on `/health`
+3. **Deploy to production** -- manual approval via GitHub environment protection, then migrations + ECS update + smoke test
+
+```mermaid
+flowchart LR
+    Push["Push to main"] --> BuildAPI["Build + Push\nAPI image"]
+    BuildAPI --> MigrateStg["Prisma migrate\n(staging)"]
+    MigrateStg --> DeployStg["Deploy to\nstaging"]
+    DeployStg --> SmokeStg["Smoke test"]
+    SmokeStg --> Approval["Manual\napproval"]
+    Approval --> MigrateProd["Prisma migrate\n(prod)"]
+    MigrateProd --> DeployProd["Deploy to\nprod"]
+    DeployProd --> SmokeProd["Smoke test"]
+```
 
 ## Local Development
 

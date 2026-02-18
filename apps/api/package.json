@@ -9,6 +9,9 @@
     "build": "prisma generate && nest build",
     "dev": "nest start --watch",
     "start": "nest start",
+    "lint": "eslint src --ext .ts",
+    "test": "jest",
+    "test:cov": "jest --coverage",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:seed": "prisma db seed",
@@ -32,12 +35,19 @@
   },
   "devDependencies": {
     "@nestjs/cli": "^11.0.0",
+    "@nestjs/testing": "^11.0.0",
     "@types/cookie-parser": "^1.4.10",
     "@types/express": "^5.0.0",
+    "@types/jest": "^29.5.0",
     "@types/node": "^22.0.0",
     "@types/passport-google-oauth20": "^2.0.17",
     "@types/passport-jwt": "^4.0.1",
+    "@typescript-eslint/eslint-plugin": "^8.0.0",
+    "@typescript-eslint/parser": "^8.0.0",
+    "eslint": "^9.0.0",
+    "jest": "^29.7.0",
     "prisma": "6.19.2",
+    "ts-jest": "^29.2.0",
     "typescript": "^5.0.0"
   }
 }
