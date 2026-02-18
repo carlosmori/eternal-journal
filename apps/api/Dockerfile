@@ -1,9 +1,11 @@
 FROM node:20-alpine AS builder
+RUN apk add --no-cache python3 make g++
 WORKDIR /app
-COPY package.json yarn.lock ./
+COPY package.json yarn.lock .yarnrc.yml ./
 COPY apps/api/package.json apps/api/
+COPY apps/web/package.json apps/web/
 COPY apps/api/prisma apps/api/prisma/
-RUN corepack enable && yarn install --frozen-lockfile
+RUN corepack enable && yarn install --immutable
 COPY apps/api apps/api
 RUN cd apps/api && npx prisma generate && npx nest build
 

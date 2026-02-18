@@ -1,8 +1,10 @@
 FROM node:20-alpine AS builder
+RUN apk add --no-cache python3 make g++
 WORKDIR /app
-COPY package.json yarn.lock ./
+COPY package.json yarn.lock .yarnrc.yml ./
 COPY apps/web/package.json apps/web/
-RUN corepack enable && yarn install --frozen-lockfile
+COPY apps/api/package.json apps/api/
+RUN corepack enable && yarn install --immutable
 COPY apps/web apps/web
 ARG NEXT_PUBLIC_API_URL
 ARG NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID
