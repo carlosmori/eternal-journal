@@ -36,6 +36,9 @@ jobs:
   #     - name: Install dependencies
   #       run: yarn install --immutable
   #
+  #     - name: Generate Prisma client
+  #       run: yarn workspace api prisma:generate
+  #
   #     - name: Check formatting
   #       run: yarn format:check
   #
