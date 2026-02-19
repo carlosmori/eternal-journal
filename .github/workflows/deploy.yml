@@ -71,18 +71,6 @@ jobs:
             prisma:
               - 'apps/api/prisma/**'
 
-      - name: Setup Node.js
-        if: steps.prisma-changes.outputs.prisma == 'true'
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-
-      - name: Install dependencies
-        if: steps.prisma-changes.outputs.prisma == 'true'
-        run: |
-          corepack enable
-          yarn install --frozen-lockfile
-
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -90,12 +78,34 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
 
-      - name: Run Prisma migrate deploy (staging)
+      - name: Run Prisma migrate via ECS task (staging)
         if: steps.prisma-changes.outputs.prisma == 'true'
-        run: npx prisma migrate deploy
-        working-directory: apps/api
-        env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          TASK_ARN=$(aws ecs run-task \
+            --cluster ${{ env.ECS_CLUSTER }} \
+            --task-definition eternal-journal-api-stg \
+            --launch-type FARGATE \
+            --network-configuration 'awsvpcConfiguration={subnets=[subnet-07239a493147ead88,subnet-0d3c67db03cf3f9bb],securityGroups=[sg-05df2090470173161],assignPublicIp=ENABLED}' \
+            --overrides '{
+              "containerOverrides": [{
+                "name": "api",
+                "command": ["npx", "prisma", "migrate", "deploy"]
+              }]
+            }' \
+            --query 'tasks[0].taskArn' --output text)
+
+          echo "Migration task: $TASK_ARN"
+          aws ecs wait tasks-stopped --cluster ${{ env.ECS_CLUSTER }} --tasks $TASK_ARN
+
+          EXIT_CODE=$(aws ecs describe-tasks \
+            --cluster ${{ env.ECS_CLUSTER }} --tasks $TASK_ARN \
+            --query 'tasks[0].containers[0].exitCode' --output text)
+
+          if [ "$EXIT_CODE" != "0" ]; then
+            echo "Migration failed with exit code $EXIT_CODE"
+            exit 1
+          fi
+          echo "Migration completed successfully"
 
       - name: Update API staging service
         run: |
