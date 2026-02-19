@@ -129,14 +129,20 @@ The NestJS API runs as Docker containers on **Amazon ECS (Fargate)**, with a sin
 
 Each environment has its own **Amazon RDS** instance running PostgreSQL 17, with independent data and credentials. Environment variables (including `DATABASE_URL`) are hardcoded in each ECS task definition.
 
-### CI/CD -- GitHub Actions
+### CI -- Pull Request Checks
 
-The deployment pipeline (`.github/workflows/deploy.yml`) handles:
+Every pull request against `main` triggers `.github/workflows/ci.yml`, which runs the following jobs in parallel:
 
-1. **Prisma migrations** -- runs automatically when the schema changes
-2. **Docker build & push** -- builds API and Web images and pushes them to ECR
-3. **Deploy to staging** -- automatic on every push
-4. **Deploy to production** -- requires manual approval
+- **Lint** -- ESLint on the Web app
+- **Typecheck** -- `tsc --noEmit` on both API and Web
+- **Build** -- full `yarn build` to catch compilation errors
+- **Test API** -- Jest unit tests for the NestJS backend
+- **Test Web** -- Jest unit tests for the Next.js frontend
+- **Test Contracts** -- Hardhat tests for smart contracts
+
+All checks must pass before merging (configured under repo Settings > Branch protection rules > `main` > Require status checks).
+
+Pre-commit hooks (Husky + lint-staged) run ESLint on staged files locally before each commit.
 
 ## Local Development
 
