@@ -28,14 +28,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Check for Prisma changes
-        id: prisma-changes
-        uses: dorny/paths-filter@v3
-        with:
-          filters: |
-            prisma:
-              - 'apps/api/prisma/**'
-
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -47,7 +39,6 @@ jobs:
         uses: aws-actions/amazon-ecr-login@v2
 
       - name: Run Prisma migrate via ECS task (production)
-        if: steps.prisma-changes.outputs.prisma == 'true'
         run: |
           TASK_ARN=$(aws ecs run-task \
             --cluster ${{ env.ECS_CLUSTER }} \
