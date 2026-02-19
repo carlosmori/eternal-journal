@@ -14,7 +14,7 @@ function fakeContext(email?: string) {
     switchToHttp: () => ({
       getRequest: () => ({ user: email ? { email } : undefined }),
     }),
-  } as any;
+  } as unknown as Parameters<AdminGuard['canActivate']>[0];
 }
 
 describe('AdminGuard', () => {

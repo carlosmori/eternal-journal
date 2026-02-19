@@ -8,6 +8,6 @@ describe('HealthController', () => {
   });
 
   it('returns status ok', () => {
-    expect(controller.check()).toEqual({ status: 'ok' });
+    expect(controller.check()).toEqual({ status: 'ok', version: 'unknown' });
   });
 });

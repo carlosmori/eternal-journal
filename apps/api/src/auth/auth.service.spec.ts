@@ -32,6 +32,7 @@ describe('AuthService', () => {
     const { jwt, prisma } = makeMocks();
     const svc = new AuthService(prisma, jwt);
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const result = svc.generateTokens(mockUser as any);
 
     expect(jwt.sign).toHaveBeenCalledTimes(2);
