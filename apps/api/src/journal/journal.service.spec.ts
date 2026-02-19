@@ -2,7 +2,14 @@ import { JournalService } from './journal.service';
 import { JournalCryptoService } from './journal-crypto.service';
 import { PrismaService } from '../prisma/prisma.service';
 
-const mockUser = { id: 'user-1', googleId: 'g-123', email: 'test@test.com', name: 'Test', picture: null, createdAt: new Date() };
+const mockUser = {
+  id: 'user-1',
+  googleId: 'g-123',
+  email: 'test@test.com',
+  name: 'Test',
+  picture: null,
+  createdAt: new Date(),
+};
 
 const mockEntry = {
   id: 'entry-1',
@@ -15,7 +22,9 @@ const mockEntry = {
 function makeMocks() {
   const crypto = {
     encrypt: jest.fn().mockReturnValue('encrypted-data'),
-    decrypt: jest.fn().mockReturnValue({ date: '2026-01-01', title: 'Hello', description: 'World' }),
+    decrypt: jest
+      .fn()
+      .mockReturnValue({ date: '2026-01-01', title: 'Hello', description: 'World' }),
   } as unknown as JournalCryptoService;
 
   const prisma = {
@@ -45,7 +54,9 @@ describe('JournalService', () => {
 
     expect(crypto.encrypt).toHaveBeenCalledWith(data);
     expect(prisma.journalEntry.create).toHaveBeenCalledWith(
-      expect.objectContaining({ data: expect.objectContaining({ ciphertext: 'encrypted-data', userId: 'user-1' }) }),
+      expect.objectContaining({
+        data: expect.objectContaining({ ciphertext: 'encrypted-data', userId: 'user-1' }),
+      }),
     );
     expect(result).toMatchObject({ id: 'entry-1', title: 'Hello' });
   });

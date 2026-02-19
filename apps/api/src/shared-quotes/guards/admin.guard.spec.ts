@@ -3,7 +3,9 @@ import { ConfigService } from '@nestjs/config';
 import { AdminGuard } from './admin.guard';
 
 function makeGuard(adminEmails: string): AdminGuard {
-  const config = { get: (_k: string, defaultVal?: string) => adminEmails ?? defaultVal } as unknown as ConfigService;
+  const config = {
+    get: (_k: string, defaultVal?: string) => adminEmails ?? defaultVal,
+  } as unknown as ConfigService;
   return new AdminGuard(config);
 }
 
