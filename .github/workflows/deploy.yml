@@ -43,7 +43,7 @@ jobs:
         run: yarn workspace api lint
 
       - name: API tests with coverage
-        run: yarn workspace api test -- --coverage
+        run: cd apps/api && npx jest --coverage
 
   # ─── Build and push API image ───
   build-api:
