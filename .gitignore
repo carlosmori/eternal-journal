@@ -29,6 +29,13 @@ contracts/artifacts/
 contracts/cache/
 contracts/typechain-types/
 
+# CDK
+infra/cdk.out/
+infra/.cdk.staging/
+
+# Coverage
+coverage/
+
 # Misc
 *.tsbuildinfo
 *.pack

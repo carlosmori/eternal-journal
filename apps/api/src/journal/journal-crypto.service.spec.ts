@@ -2,7 +2,9 @@ import { ConfigService } from '@nestjs/config';
 import { JournalCryptoService, JournalPlaintext } from './journal-crypto.service';
 
 function makeService(key = 'test-encryption-key-for-ci'): JournalCryptoService {
-  const config = { get: (k: string) => (k === 'JOURNAL_ENCRYPTION_KEY' ? key : undefined) } as ConfigService;
+  const config = {
+    get: (k: string) => (k === 'JOURNAL_ENCRYPTION_KEY' ? key : undefined),
+  } as ConfigService;
   return new JournalCryptoService(config);
 }
 

@@ -40,8 +40,8 @@ describe('SharedQuotesService', () => {
 
     const svc = new SharedQuotesService(prisma, crypto);
 
-    await expect(
-      svc.share('g-123', { text: 'hello', sourceEntryId: 'entry-1' }),
-    ).rejects.toThrow(ConflictException);
+    await expect(svc.share('g-123', { text: 'hello', sourceEntryId: 'entry-1' })).rejects.toThrow(
+      ConflictException,
+    );
   });
 });

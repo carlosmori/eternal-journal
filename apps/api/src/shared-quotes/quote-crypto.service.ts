@@ -1,11 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import {
-  createCipheriv,
-  createDecipheriv,
-  createHash,
-  randomBytes,
-} from 'crypto';
+import { createCipheriv, createDecipheriv, createHash, randomBytes } from 'crypto';
 
 const ALGORITHM = 'aes-256-gcm';
 const IV_LENGTH = 12;
@@ -18,9 +13,7 @@ export class QuoteCryptoService {
   constructor(config: ConfigService) {
     const seed = config.get<string>('ADMIN_ENCRYPTION_SEED');
     if (!seed) {
-      throw new Error(
-        'ADMIN_ENCRYPTION_SEED is not set. Add it to your .env file.',
-      );
+      throw new Error('ADMIN_ENCRYPTION_SEED is not set. Add it to your .env file.');
     }
     this.key = createHash('sha256').update(seed).digest();
   }
@@ -51,10 +44,7 @@ export class QuoteCryptoService {
     });
     decipher.setAuthTag(authTag);
 
-    const decrypted = Buffer.concat([
-      decipher.update(encrypted),
-      decipher.final(),
-    ]);
+    const decrypted = Buffer.concat([decipher.update(encrypted), decipher.final()]);
 
     return decrypted.toString('utf-8');
   }

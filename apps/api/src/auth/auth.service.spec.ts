@@ -2,7 +2,14 @@ import { JwtService } from '@nestjs/jwt';
 import { AuthService } from './auth.service';
 import { PrismaService } from '../prisma/prisma.service';
 
-const mockUser = { id: 'user-1', googleId: 'g-123', email: 'test@test.com', name: 'Test', picture: null, createdAt: new Date() };
+const mockUser = {
+  id: 'user-1',
+  googleId: 'g-123',
+  email: 'test@test.com',
+  name: 'Test',
+  picture: null,
+  createdAt: new Date(),
+};
 
 function makeMocks() {
   const jwt = {

@@ -13,18 +13,8 @@ import {
 import { Request } from 'express';
 import { JournalService } from './journal.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-
-class CreateEntryDto {
-  date: string;
-  title: string;
-  description: string;
-}
-
-class UpdateEntryDto {
-  date?: string;
-  title?: string;
-  description?: string;
-}
+import { CreateEntryDto } from './dto/create-entry.dto';
+import { UpdateEntryDto } from './dto/update-entry.dto';
 
 @Controller('journal')
 @UseGuards(JwtAuthGuard)
@@ -48,11 +38,7 @@ export class JournalController {
   }
 
   @Patch(':id')
-  async updateEntry(
-    @Req() req: Request,
-    @Param('id') id: string,
-    @Body() dto: UpdateEntryDto,
-  ) {
+  async updateEntry(@Req() req: Request, @Param('id') id: string, @Body() dto: UpdateEntryDto) {
     const user = req.user as { userId: string };
     const updated = await this.journalService.update(user.userId, id, dto);
     if (!updated) throw new NotFoundException('Entry not found');

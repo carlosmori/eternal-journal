@@ -38,13 +38,8 @@ export class SharedQuotesService {
 
       return { id: quote.id, status: quote.status };
     } catch (error) {
-      if (
-        error instanceof Prisma.PrismaClientKnownRequestError &&
-        error.code === 'P2002'
-      ) {
-        throw new ConflictException(
-          'This entry has already been shared with the community.',
-        );
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+        throw new ConflictException('This entry has already been shared with the community.');
       }
       throw error;
     }
@@ -65,9 +60,7 @@ export class SharedQuotesService {
     return true;
   }
 
-  async getSharedByUser(
-    googleId: string,
-  ): Promise<{ sourceEntryId: string; quoteId: string }[]> {
+  async getSharedByUser(googleId: string): Promise<{ sourceEntryId: string; quoteId: string }[]> {
     const user = await this.prisma.user.findUnique({
       where: { googleId },
     });
@@ -90,9 +83,7 @@ export class SharedQuotesService {
     const safeCount = Math.min(Math.max(count, 1), 20);
 
     // Use raw query for random ordering (PostgreSQL)
-    const rows = await this.prisma.$queryRaw<
-      { id: string; ciphertext: string }[]
-    >`
+    const rows = await this.prisma.$queryRaw<{ id: string; ciphertext: string }[]>`
       SELECT id, ciphertext FROM "SharedQuote"
       WHERE status = 'APPROVED'
       ${excludeIds.length > 0 ? Prisma.sql`AND id NOT IN (${Prisma.join(excludeIds)})` : Prisma.empty}
@@ -119,9 +110,7 @@ export class SharedQuotesService {
     }));
   }
 
-  async getAllForAdmin(
-    status?: string,
-  ): Promise<(SharedQuoteDto & { status: string })[]> {
+  async getAllForAdmin(status?: string): Promise<(SharedQuoteDto & { status: string })[]> {
     const where = status ? { status } : {};
     const rows = await this.prisma.sharedQuote.findMany({
       where,

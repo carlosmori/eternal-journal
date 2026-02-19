@@ -15,8 +15,9 @@ import { SharedQuotesService } from './shared-quotes.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { AdminGuard } from './guards/admin.guard';
 import { Throttle } from '@nestjs/throttler';
-
-// --- Public endpoints ---
+import { ShareQuoteDto } from './dto/share-quote.dto';
+import { ReviewQuoteDto } from './dto/review-quote.dto';
+import { GetBatchQueryDto } from './dto/get-batch-query.dto';
 
 @Controller('shared-quotes')
 export class SharedQuotesController {
@@ -24,27 +25,16 @@ export class SharedQuotesController {
 
   @Get('batch')
   @Throttle({ default: { ttl: 60000, limit: 20 } })
-  async getRandomBatch(
-    @Query('count') count?: string,
-    @Query('exclude') exclude?: string,
-  ) {
-    const parsedCount = count ? parseInt(count, 10) : 5;
-    const excludeIds = exclude
-      ? exclude.split(',').filter(Boolean)
-      : [];
-    const quotes =
-      await this.sharedQuotesService.getRandomBatch(parsedCount, excludeIds);
+  async getRandomBatch(@Query() query: GetBatchQueryDto) {
+    const parsedCount = query.count ? parseInt(query.count, 10) : 5;
+    const excludeIds = query.exclude ? query.exclude.split(',').filter(Boolean) : [];
+    const quotes = await this.sharedQuotesService.getRandomBatch(parsedCount, excludeIds);
     return { quotes };
   }
 
-  // --- Authenticated user endpoints ---
-
   @Post()
   @UseGuards(JwtAuthGuard)
-  async share(
-    @Req() req: Request,
-    @Body() dto: { text: string; sourceEntryId?: string },
-  ) {
+  async share(@Req() req: Request, @Body() dto: ShareQuoteDto) {
     const user = req.user as { userId: string };
     return this.sharedQuotesService.share(user.userId, dto);
   }
@@ -60,13 +50,10 @@ export class SharedQuotesController {
   @UseGuards(JwtAuthGuard)
   async getMyShared(@Req() req: Request) {
     const user = req.user as { userId: string };
-    const shared =
-      await this.sharedQuotesService.getSharedByUser(user.userId);
+    const shared = await this.sharedQuotesService.getSharedByUser(user.userId);
     return { shared };
   }
 }
-
-// --- Admin endpoints ---
 
 @Controller('admin/shared-quotes')
 @UseGuards(JwtAuthGuard, AdminGuard)
@@ -82,10 +69,7 @@ export class AdminSharedQuotesController {
   }
 
   @Patch(':id')
-  async review(
-    @Param('id') id: string,
-    @Body() dto: { status: 'APPROVED' | 'REJECTED' },
-  ) {
+  async review(@Param('id') id: string, @Body() dto: ReviewQuoteDto) {
     return this.sharedQuotesService.review(id, dto.status);
   }
 }
