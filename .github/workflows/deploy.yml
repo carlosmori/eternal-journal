@@ -87,19 +87,12 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
 
-      - name: Get staging DATABASE_URL from Secrets Manager
-        if: steps.prisma-changes.outputs.prisma == 'true'
-        run: |
-          DB_URL=$(aws secretsmanager get-secret-value \
-            --secret-id eternal-journal/database-url \
-            --query SecretString --output text)
-          echo "::add-mask::$DB_URL"
-          echo "DATABASE_URL=$DB_URL" >> $GITHUB_ENV
-
       - name: Run Prisma migrate deploy (staging)
         if: steps.prisma-changes.outputs.prisma == 'true'
         run: npx prisma migrate deploy
         working-directory: apps/api
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
 
       - name: Update API staging service
         run: |
@@ -167,19 +160,12 @@ jobs:
       - name: Login to ECR
         uses: aws-actions/amazon-ecr-login@v2
 
-      - name: Get production DATABASE_URL from Secrets Manager
-        if: steps.prisma-changes.outputs.prisma == 'true'
-        run: |
-          DB_URL=$(aws secretsmanager get-secret-value \
-            --secret-id eternal-journal/database-url-prod \
-            --query SecretString --output text)
-          echo "::add-mask::$DB_URL"
-          echo "DATABASE_URL=$DB_URL" >> $GITHUB_ENV
-
       - name: Run Prisma migrate deploy (production)
         if: steps.prisma-changes.outputs.prisma == 'true'
         run: npx prisma migrate deploy
         working-directory: apps/api
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
 
       - name: Re-tag API image for prod
         run: |

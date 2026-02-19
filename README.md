@@ -118,38 +118,18 @@ The database is **Amazon RDS** running PostgreSQL 16. Connection strings and oth
 
 ### CI -- Pull Request Checks
 
-Every pull request against `main` triggers `.github/workflows/ci.yml`:
+Every pull request against `main` triggers `.github/workflows/ci.yml`, which runs the following jobs in parallel:
 
-- **Lint** -- ESLint on API and Web
-- **Typecheck** -- `tsc --noEmit` on API and Web
+- **Lint** -- ESLint on the Web app
+- **Typecheck** -- `tsc --noEmit` on both API and Web
 - **Build** -- full `yarn build` to catch compilation errors
 - **Test API** -- Jest unit tests for the NestJS backend
 - **Test Web** -- Jest unit tests for the Next.js frontend
 - **Test Contracts** -- Hardhat tests for smart contracts
 
-All checks must pass before merging (configure under repo Settings > Branch protection rules > `main` > Require status checks).
+All checks must pass before merging (configured under repo Settings > Branch protection rules > `main` > Require status checks).
 
-### CD -- Deployment
-
-**Frontend**: AWS Amplify builds and deploys the Next.js app automatically on push to `main` (configured in `amplify.yml`).
-
-**Backend**: `.github/workflows/deploy.yml` handles the API:
-
-1. **Build & push** -- Docker image built and pushed to ECR (tagged with commit SHA)
-2. **Deploy to staging** -- Prisma migrations (if schema changed) + ECS service update + smoke test on `/health`
-3. **Deploy to production** -- manual approval via GitHub environment protection, then migrations + ECS update + smoke test
-
-```mermaid
-flowchart LR
-    Push["Push to main"] --> BuildAPI["Build + Push\nAPI image"]
-    BuildAPI --> MigrateStg["Prisma migrate\n(staging)"]
-    MigrateStg --> DeployStg["Deploy to\nstaging"]
-    DeployStg --> SmokeStg["Smoke test"]
-    SmokeStg --> Approval["Manual\napproval"]
-    Approval --> MigrateProd["Prisma migrate\n(prod)"]
-    MigrateProd --> DeployProd["Deploy to\nprod"]
-    DeployProd --> SmokeProd["Smoke test"]
-```
+Pre-commit hooks (Husky + lint-staged) run ESLint on staged files locally before each commit.
 
 ## Local Development
 
