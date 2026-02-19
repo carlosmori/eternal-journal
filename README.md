@@ -74,6 +74,8 @@ The on-chain storage is handled by `EternalJournalPureOnChainV2.sol`, an upgrade
 
 ## AWS Architecture
 
+The backend runs on two isolated environments (staging and production) sharing a single ALB with port-based routing.
+
 ```mermaid
 flowchart TB
     Browser[Browser]
@@ -83,26 +85,37 @@ flowchart TB
         Proxy["Reverse Proxy\n/api/backend/*"]
     end
 
-    subgraph ecs ["Amazon ECS"]
-        ALB[Application Load Balancer]
-        API1[API Container]
-        API2[API Container]
+    subgraph alb ["ALB: eternal-journal-alb"]
+        Listener80["Listener :80 (prod)"]
+        Listener8080["Listener :8080 (stg)"]
+    end
+
+    subgraph ecs ["Amazon ECS · Cluster: eternal-journal"]
+        SvcProd["Service: api-service"]
+        SvcStg["Service: api-service-stg"]
     end
 
     ECR[Amazon ECR]
-    RDS[(Amazon RDS\nPostgreSQL 16)]
-    Secrets[AWS Secrets Manager]
+    RDSProd[("RDS: eternaljournal-db\n(prod)")]
+    RDSStg[("RDS: eternaljournal-db-stg\n(stg)")]
 
     Browser -->|HTTPS| NextJS
     NextJS -->|Server-side requests| Proxy
-    Proxy -->|Forwards to backend| ALB
-    ALB --> API1
-    ALB --> API2
+    Proxy -->|"Forwards to backend"| alb
+    Listener80 --> SvcProd
+    Listener8080 --> SvcStg
     ECR -.->|Docker images| ecs
-    API1 --> RDS
-    API2 --> RDS
-    Secrets -.->|DATABASE_URL, etc.| ecs
+    SvcProd --> RDSProd
+    SvcStg --> RDSStg
 ```
+
+| | Staging | Production |
+|---|---|---|
+| **ECS Service** | `api-service-stg` | `api-service` |
+| **Task Definition** | `eternal-journal-api-stg` | `eternal-journal-api-prod` |
+| **ALB Port** | `:8080` | `:80` |
+| **Target Group** | `eternal-journal-api-tg` | `eternal-journal-api-tg-prod` |
+| **RDS Instance** | `eternaljournal-db-stg` | `eternaljournal-db` |
 
 ### Frontend -- AWS Amplify
 
@@ -112,9 +125,9 @@ The frontend includes a **reverse proxy** route at `apps/web/src/app/api/backend
 
 ### Backend -- Amazon ECS
 
-The NestJS API runs as Docker containers on **Amazon ECS**, with an **Application Load Balancer (ALB)** in front to distribute traffic across container instances. Docker images are stored in **Amazon ECR**.
+The NestJS API runs as Docker containers on **Amazon ECS (Fargate)**, with a single **Application Load Balancer (ALB)** using port-based routing to separate staging (`:8080`) and production (`:80`). Docker images are stored in **Amazon ECR**.
 
-The database is **Amazon RDS** running PostgreSQL 16. Connection strings and other secrets are stored in **AWS Secrets Manager**.
+Each environment has its own **Amazon RDS** instance running PostgreSQL 17, with independent data and credentials. Environment variables (including `DATABASE_URL`) are hardcoded in each ECS task definition.
 
 ### CI/CD -- GitHub Actions
 

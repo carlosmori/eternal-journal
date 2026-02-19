@@ -6,6 +6,9 @@ export class HealthController {
   @Get()
   @SkipThrottle()
   check() {
-    return { status: 'ok' };
+    return {
+      status: 'ok',
+      version: process.env.APP_VERSION || 'unknown',
+    };
   }
 }

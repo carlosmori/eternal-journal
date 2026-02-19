@@ -11,7 +11,9 @@ RUN cd apps/api && npx prisma generate && npx nest build
 
 FROM node:20-alpine AS runner
 WORKDIR /app
+ARG APP_VERSION=unknown
 ENV NODE_ENV=production
+ENV APP_VERSION=${APP_VERSION}
 COPY --from=builder /app/apps/api/dist ./dist
 COPY --from=builder /app/apps/api/prisma ./prisma
 COPY --from=builder /app/apps/api/package.json ./
