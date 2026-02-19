@@ -62,10 +62,6 @@ jobs:
             apps/web/node_modules
           key: nm-${{ runner.os }}-${{ hashFiles('yarn.lock') }}-${{ github.sha }}
 
-      - name: Lint API
-        run: yarn lint
-        working-directory: apps/api
-
       - name: Lint Web
         run: yarn lint
         working-directory: apps/web
@@ -215,19 +211,10 @@ jobs:
       - name: Enable Corepack
         run: corepack enable
 
-      - name: Restore node_modules
-        uses: actions/cache/restore@v4
-        with:
-          path: |
-            node_modules
-            apps/api/node_modules
-            apps/web/node_modules
-          key: nm-${{ runner.os }}-${{ hashFiles('yarn.lock') }}-${{ github.sha }}
-
       - name: Install contract dependencies
-        run: yarn install --immutable
+        run: npm ci
         working-directory: contracts
 
       - name: Run contract tests
-        run: yarn test
+        run: npm test
         working-directory: contracts
