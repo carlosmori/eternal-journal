@@ -52,6 +52,7 @@ jobs:
           tags: |
             ${{ env.ECR_REGISTRY }}/eternal-journal-api:${{ steps.meta.outputs.tag }}
             ${{ env.ECR_REGISTRY }}/eternal-journal-api:latest
+            ${{ env.ECR_REGISTRY }}/eternal-journal-api:stg
 
   # ─── Staging: migrate + deploy ───
   deploy-staging:
