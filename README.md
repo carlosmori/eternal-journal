@@ -144,6 +144,28 @@ All checks must pass before merging (configured under repo Settings > Branch pro
 
 Pre-commit hooks (Husky + lint-staged) run ESLint on staged files locally before each commit.
 
+### CD -- Deployment
+
+Deployments are split into two workflows:
+
+**Staging** (`.github/workflows/deploy.yml`) -- automatic on every push to `main`:
+
+1. Builds the Docker image and pushes to ECR (tagged with commit SHA, `latest`, and `stg`)
+2. Runs Prisma migrations via a one-off ECS Fargate task inside the VPC (if schema changed)
+3. Forces a new deployment of `api-service-stg`
+4. Waits for stability + smoke test on `/health`
+
+**Production** (`.github/workflows/deploy-prod.yml`) -- manual trigger via `workflow_dispatch`:
+
+1. Go to GitHub Actions > "Deploy API to Production" > Run workflow
+2. Provide the commit SHA (image tag) to deploy
+3. Runs Prisma migrations via ECS task inside the VPC (if schema changed)
+4. Re-tags the image as `prod-<sha>` and pushes to ECR
+5. Forces a new deployment of `api-service`
+6. Waits for stability + smoke test on `/health`
+
+The health endpoint returns `{"status":"ok","version":"<commit-sha>"}` to verify which version is running in each environment.
+
 ## Local Development
 
 ### With Docker (recommended)
