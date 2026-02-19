@@ -124,39 +124,60 @@ export default function HomePage() {
               Private. Encrypted. Built with care for what matters to you.
             </p>
 
-                <motion.button
-                  onClick={handleEnter}
-                  whileHover={{ scale: 1.03, y: -2 }}
-                  whileTap={{ scale: 0.98 }}
-                  transition={{ type: 'spring', stiffness: 400, damping: 17 }}
-                  className="glass-button px-10 py-3.5 text-lg shadow-lg shadow-violet-500/20"
-                >
-                  Start writing
-                </motion.button>
+            <motion.button
+              onClick={handleEnter}
+              whileHover={{ scale: 1.03, y: -2 }}
+              whileTap={{ scale: 0.98 }}
+              transition={{ type: 'spring', stiffness: 400, damping: 17 }}
+              className="glass-button px-10 py-3.5 text-lg shadow-lg shadow-violet-500/20"
+            >
+              Start writing
+            </motion.button>
 
-                <div className="mt-8 flex flex-wrap justify-center gap-6 text-sm text-violet-600 dark:text-violet-400">
-                  <span className="flex items-center gap-2">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
-                      <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-                    </svg>
-                    Private
-                  </span>
-                  <span className="flex items-center gap-2">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-                    </svg>
-                    Encrypted
-                  </span>
-                  <span className="flex items-center gap-2">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <circle cx="12" cy="12" r="10" />
-                      <polyline points="12 6 12 12 16 14" />
-                    </svg>
-                    Forever
-                  </span>
-                </div>
-              </div>
+            <div className="mt-8 flex flex-wrap justify-center gap-6 text-sm text-violet-600 dark:text-violet-400">
+              <span className="flex items-center gap-2">
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                >
+                  <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                  <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                </svg>
+                Private
+              </span>
+              <span className="flex items-center gap-2">
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                >
+                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                </svg>
+                Encrypted
+              </span>
+              <span className="flex items-center gap-2">
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                >
+                  <circle cx="12" cy="12" r="10" />
+                  <polyline points="12 6 12 12 16 14" />
+                </svg>
+                Forever
+              </span>
+            </div>
+          </div>
         </motion.div>
 
         {/* Loading state - appears as card flips away */}
@@ -196,9 +217,7 @@ export default function HomePage() {
 
       {/* Tutorial overlay */}
       <AnimatePresence>
-        {showTutorial && mounted && (
-          <Tutorial onComplete={handleTutorialComplete} />
-        )}
+        {showTutorial && mounted && <Tutorial onComplete={handleTutorialComplete} />}
       </AnimatePresence>
     </main>
   );

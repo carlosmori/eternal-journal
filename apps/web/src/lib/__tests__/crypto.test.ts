@@ -3,7 +3,8 @@
  */
 import { deriveKey, encryptEntry, decryptEntry, estimateBytes, JournalEntry } from '../crypto';
 
-const FAKE_SIGNATURE = '0xabcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcd' as `0x${string}`;
+const FAKE_SIGNATURE =
+  '0xabcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcd' as `0x${string}`;
 
 const entry: JournalEntry = {
   date: '2026-02-18',

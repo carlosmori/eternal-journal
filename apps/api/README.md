@@ -8,11 +8,11 @@ NestJS backend for the Eternal Journal hybrid app. Provides Web2 authentication 
 
 Eternal Journal is a hybrid Web2/Web3 application with three persistence tiers:
 
-| Tier | Auth | Storage | API Usage |
-|------|------|---------|-----------|
-| **Guest** | None | `localStorage` (browser) | No API calls |
-| **Web2** | Google OAuth + JWT | NestJS API (in-memory) | Full REST API |
-| **Web3** | Wallet (RainbowKit) | Blockchain (Base Sepolia) | No API calls |
+| Tier      | Auth                | Storage                   | API Usage     |
+| --------- | ------------------- | ------------------------- | ------------- |
+| **Guest** | None                | `localStorage` (browser)  | No API calls  |
+| **Web2**  | Google OAuth + JWT  | NestJS API (in-memory)    | Full REST API |
+| **Web3**  | Wallet (RainbowKit) | Blockchain (Base Sepolia) | No API calls  |
 
 **This backend serves only the Web2 tier.** Guest and Web3 modes are handled entirely on the frontend (localStorage and smart contract respectively).
 
@@ -47,13 +47,13 @@ Eternal Journal is a hybrid Web2/Web3 application with three persistence tiers:
 
 ## Tech Stack
 
-| Category | Technology |
-|----------|------------|
-| **Runtime** | Node.js |
-| **Framework** | NestJS 11 |
-| **Language** | TypeScript 5 |
-| **Auth** | Passport.js, Google OAuth 2.0, JWT |
-| **Config** | @nestjs/config (env vars) |
+| Category      | Technology                         |
+| ------------- | ---------------------------------- |
+| **Runtime**   | Node.js                            |
+| **Framework** | NestJS 11                          |
+| **Language**  | TypeScript 5                       |
+| **Auth**      | Passport.js, Google OAuth 2.0, JWT |
+| **Config**    | @nestjs/config (env vars)          |
 
 ### Dependencies
 
@@ -105,10 +105,10 @@ apps/api/
 
 ### JWT Endpoints
 
-| Method | Route | Auth | Description |
-|--------|-------|------|-------------|
-| GET | `/auth/me` | Bearer JWT | Returns current user (`userId`, `email`, `name`) |
-| POST | `/auth/refresh` | — | Body: `{ refreshToken }`. Returns new `accessToken` and `refreshToken`. |
+| Method | Route           | Auth       | Description                                                             |
+| ------ | --------------- | ---------- | ----------------------------------------------------------------------- |
+| GET    | `/auth/me`      | Bearer JWT | Returns current user (`userId`, `email`, `name`)                        |
+| POST   | `/auth/refresh` | —          | Body: `{ refreshToken }`. Returns new `accessToken` and `refreshToken`. |
 
 ### User Storage
 
@@ -122,11 +122,11 @@ All journal endpoints require a valid JWT in the `Authorization` header.
 
 ### Endpoints
 
-| Method | Route | Description |
-|-------|-------|-------------|
-| GET | `/journal` | List all entries for the authenticated user |
-| POST | `/journal` | Create a new entry. Body: `{ date, title, description }` |
-| DELETE | `/journal/:id` | Delete an entry by ID |
+| Method | Route          | Description                                              |
+| ------ | -------------- | -------------------------------------------------------- |
+| GET    | `/journal`     | List all entries for the authenticated user              |
+| POST   | `/journal`     | Create a new entry. Body: `{ date, title, description }` |
+| DELETE | `/journal/:id` | Delete an entry by ID                                    |
 
 ### Entry Shape
 
@@ -156,13 +156,13 @@ Guest mode does **not** use this API. Entries are stored in the browser's `local
 
 Create `.env` from `.env.example`:
 
-| Variable | Description | Example |
-|----------|-------------|---------|
-| `GOOGLE_CLIENT_ID` | Google OAuth client ID | From [Google Cloud Console](https://console.cloud.google.com/) |
-| `GOOGLE_CLIENT_SECRET` | Google OAuth client secret | From Google Cloud Console |
-| `JWT_SECRET` | Secret for signing JWTs | Strong random string |
-| `API_URL` | Public URL of this API (for OAuth callback) | `http://localhost:3001` |
-| `FRONTEND_URL` | Frontend URL (OAuth redirect target) | `http://localhost:3000` |
+| Variable               | Description                                 | Example                                                        |
+| ---------------------- | ------------------------------------------- | -------------------------------------------------------------- |
+| `GOOGLE_CLIENT_ID`     | Google OAuth client ID                      | From [Google Cloud Console](https://console.cloud.google.com/) |
+| `GOOGLE_CLIENT_SECRET` | Google OAuth client secret                  | From Google Cloud Console                                      |
+| `JWT_SECRET`           | Secret for signing JWTs                     | Strong random string                                           |
+| `API_URL`              | Public URL of this API (for OAuth callback) | `http://localhost:3001`                                        |
+| `FRONTEND_URL`         | Frontend URL (OAuth redirect target)        | `http://localhost:3000`                                        |
 
 ### Google OAuth Setup
 

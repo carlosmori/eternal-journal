@@ -19,7 +19,10 @@ interface AddQuoteModalProps {
   onGuestAdd?: (data: { date: string; title: string; description: string }) => void;
   onWeb2Add?: (data: { date: string; title: string; description: string }) => Promise<void>;
   onGuestUpdate?: (id: number, data: { date: string; title: string; description: string }) => void;
-  onWeb2Update?: (id: string, data: { date: string; title: string; description: string }) => Promise<void>;
+  onWeb2Update?: (
+    id: string,
+    data: { date: string; title: string; description: string },
+  ) => Promise<void>;
 }
 
 export function AddQuoteModal({
@@ -153,7 +156,16 @@ export function AddQuoteModal({
             className="w-8 h-8 rounded-lg flex items-center justify-center text-violet-500 dark:text-violet-400 hover:bg-violet-200/30 dark:hover:bg-violet-800/30 transition-colors"
             aria-label="Close"
           >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
               <path d="M18 6L6 18" />
               <path d="M6 6l12 12" />
             </svg>
@@ -208,7 +220,9 @@ export function AddQuoteModal({
         )}
 
         {message && (
-          <p className={`mt-2 text-sm ${message.includes('sent') ? 'text-violet-600 dark:text-violet-300' : 'text-red-500 dark:text-red-400'}`}>
+          <p
+            className={`mt-2 text-sm ${message.includes('sent') ? 'text-violet-600 dark:text-violet-300' : 'text-red-500 dark:text-red-400'}`}
+          >
             {message}
           </p>
         )}

@@ -18,22 +18,17 @@ export function useGuestEntries() {
     setIsLoading(false);
   }, []);
 
-  const addEntry = useCallback(
-    (data: { date: string; title: string; description: string }) => {
-      const entry = addGuestEntry(data);
-      setEntries((prev) => [entry, ...prev]);
-      return entry;
-    },
-    [],
-  );
+  const addEntry = useCallback((data: { date: string; title: string; description: string }) => {
+    const entry = addGuestEntry(data);
+    setEntries((prev) => [entry, ...prev]);
+    return entry;
+  }, []);
 
   const updateEntry = useCallback(
     (id: number, data: { date: string; title: string; description: string }) => {
       const updated = updateGuestEntry(id, data);
       if (updated) {
-        setEntries((prev) =>
-          prev.map((e) => (e.id === id ? updated : e)),
-        );
+        setEntries((prev) => prev.map((e) => (e.id === id ? updated : e)));
       }
       return updated;
     },

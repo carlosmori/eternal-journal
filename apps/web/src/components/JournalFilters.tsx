@@ -112,12 +112,17 @@ export function JournalFilters({
           }`}
           title="Favorites"
         >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill={favoritesOnly ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2">
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill={favoritesOnly ? 'currentColor' : 'none'}
+            stroke="currentColor"
+            strokeWidth="2"
+          >
             <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z" />
           </svg>
-          {favoriteCount > 0 && (
-            <span className="text-xs">{favoriteCount}</span>
-          )}
+          {favoriteCount > 0 && <span className="text-xs">{favoriteCount}</span>}
         </button>
 
         {/* Filter toggle */}
@@ -130,7 +135,16 @@ export function JournalFilters({
           }`}
           title="Filters"
         >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
             <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
           </svg>
           {hasActiveFilters && !expanded && (
@@ -146,7 +160,16 @@ export function JournalFilters({
             title="Add entry"
             aria-label="Add entry"
           >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
               <path d="M12 5v14" />
               <path d="M5 12h14" />
             </svg>
@@ -167,21 +190,29 @@ export function JournalFilters({
             <div className="p-3 rounded-xl bg-white/30 dark:bg-violet-900/20 border border-violet-200/30 dark:border-violet-700/20 space-y-3">
               {/* Date presets */}
               <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-xs text-violet-500 dark:text-violet-400 font-medium">Quick:</span>
+                <span className="text-xs text-violet-500 dark:text-violet-400 font-medium">
+                  Quick:
+                </span>
                 {(['week', 'month', 'year'] as const).map((preset) => (
                   <button
                     key={preset}
                     onClick={() => applyPreset(preset)}
                     className="px-2.5 py-1 rounded-lg text-xs font-medium text-violet-600 dark:text-violet-300 bg-white/40 dark:bg-violet-800/30 border border-violet-200/40 dark:border-violet-600/30 hover:bg-white/60 dark:hover:bg-violet-700/40 transition-colors"
                   >
-                    {preset === 'week' ? 'This week' : preset === 'month' ? 'This month' : 'This year'}
+                    {preset === 'week'
+                      ? 'This week'
+                      : preset === 'month'
+                        ? 'This month'
+                        : 'This year'}
                   </button>
                 ))}
               </div>
 
               {/* Date range */}
               <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-xs text-violet-500 dark:text-violet-400 font-medium">Range:</span>
+                <span className="text-xs text-violet-500 dark:text-violet-400 font-medium">
+                  Range:
+                </span>
                 <input
                   type="date"
                   value={dateFrom}

@@ -86,14 +86,29 @@ function EntryCard({
       canSaveForever={canSaveForever}
       onSaveForever={onSaveForever}
       isForever={item.source === 'web3'}
-      isSharedWithCommunity={showCommunity && isSharedWithCommunity ? isSharedWithCommunity(item.entryIndex) : false}
+      isSharedWithCommunity={
+        showCommunity && isSharedWithCommunity ? isSharedWithCommunity(item.entryIndex) : false
+      }
       onShareToCommunity={showCommunity ? onShareToCommunity : undefined}
       onUnshareCommunity={showCommunity ? onUnshareCommunity : undefined}
     />
   );
 }
 
-export function JournalListView({ entries, isFavorite, onToggleFavorite, editable, onEdit, canDelete, onDelete, canSaveForever, onSaveForever, isSharedWithCommunity, onShareToCommunity, onUnshareCommunity }: JournalViewsProps) {
+export function JournalListView({
+  entries,
+  isFavorite,
+  onToggleFavorite,
+  editable,
+  onEdit,
+  canDelete,
+  onDelete,
+  canSaveForever,
+  onSaveForever,
+  isSharedWithCommunity,
+  onShareToCommunity,
+  onUnshareCommunity,
+}: JournalViewsProps) {
   return (
     <motion.div
       className="space-y-4"

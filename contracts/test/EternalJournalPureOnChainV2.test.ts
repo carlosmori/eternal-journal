@@ -17,9 +17,7 @@ describe('EternalJournalPureOnChainV2', () => {
   beforeEach(async () => {
     [admin, pauser, upgrader, user1, user2] = await ethers.getSigners();
 
-    const Factory = await ethers.getContractFactory(
-      'EternalJournalPureOnChainV2',
-    );
+    const Factory = await ethers.getContractFactory('EternalJournalPureOnChainV2');
     const proxy = await upgrades.deployProxy(
       Factory,
       [admin.address, pauser.address, upgrader.address],
@@ -35,13 +33,10 @@ describe('EternalJournalPureOnChainV2', () => {
       const UPGRADER_ROLE = await contract.UPGRADER_ROLE();
       const FEE_MANAGER_ROLE = await contract.FEE_MANAGER_ROLE();
 
-      expect(await contract.hasRole(DEFAULT_ADMIN_ROLE, admin.address)).to.be
-        .true;
+      expect(await contract.hasRole(DEFAULT_ADMIN_ROLE, admin.address)).to.be.true;
       expect(await contract.hasRole(PAUSER_ROLE, pauser.address)).to.be.true;
-      expect(await contract.hasRole(UPGRADER_ROLE, upgrader.address)).to.be
-        .true;
-      expect(await contract.hasRole(FEE_MANAGER_ROLE, admin.address)).to.be
-        .true;
+      expect(await contract.hasRole(UPGRADER_ROLE, upgrader.address)).to.be.true;
+      expect(await contract.hasRole(FEE_MANAGER_ROLE, admin.address)).to.be.true;
     });
 
     it('should set the default fee', async () => {
@@ -49,17 +44,14 @@ describe('EternalJournalPureOnChainV2', () => {
     });
 
     it('should not allow re-initialization', async () => {
-      await expect(
-        contract.initialize(admin.address, pauser.address, upgrader.address),
-      ).to.be.reverted;
+      await expect(contract.initialize(admin.address, pauser.address, upgrader.address)).to.be
+        .reverted;
     });
   });
 
   describe('addEntry', () => {
     it('should add an entry and emit NewEntry', async () => {
-      await expect(
-        contract.connect(user1).addEntry(sampleCiphertext, { value: FEE }),
-      )
+      await expect(contract.connect(user1).addEntry(sampleCiphertext, { value: FEE }))
         .to.emit(contract, 'NewEntry')
         .withArgs(user1.address, 0, () => true);
 
@@ -73,16 +65,16 @@ describe('EternalJournalPureOnChainV2', () => {
     });
 
     it('should revert with empty ciphertext', async () => {
-      await expect(
-        contract.connect(user1).addEntry('0x', { value: FEE }),
-      ).to.be.revertedWith('Empty entry');
+      await expect(contract.connect(user1).addEntry('0x', { value: FEE })).to.be.revertedWith(
+        'Empty entry',
+      );
     });
 
     it('should revert when ciphertext exceeds MAX_ENTRY_BYTES', async () => {
       const oversized = new Uint8Array(1025);
-      await expect(
-        contract.connect(user1).addEntry(oversized, { value: FEE }),
-      ).to.be.revertedWith('Entry too large');
+      await expect(contract.connect(user1).addEntry(oversized, { value: FEE })).to.be.revertedWith(
+        'Entry too large',
+      );
     });
 
     it('should accept ciphertext at exactly MAX_ENTRY_BYTES', async () => {
@@ -94,9 +86,8 @@ describe('EternalJournalPureOnChainV2', () => {
 
     it('should revert when paused', async () => {
       await contract.connect(pauser).pause();
-      await expect(
-        contract.connect(user1).addEntry(sampleCiphertext, { value: FEE }),
-      ).to.be.reverted;
+      await expect(contract.connect(user1).addEntry(sampleCiphertext, { value: FEE })).to.be
+        .reverted;
     });
   });
 
@@ -121,21 +112,17 @@ describe('EternalJournalPureOnChainV2', () => {
     });
 
     it('should revert for out-of-range index', async () => {
-      await expect(
-        contract.getEntry(user1.address, 99),
-      ).to.be.revertedWith('Index out of range');
+      await expect(contract.getEntry(user1.address, 99)).to.be.revertedWith('Index out of range');
     });
 
     it('should revert when start > end in getEntries', async () => {
-      await expect(
-        contract.getEntries(user1.address, 3, 1),
-      ).to.be.revertedWith('start > end');
+      await expect(contract.getEntries(user1.address, 3, 1)).to.be.revertedWith('start > end');
     });
 
     it('should revert when end out of range in getEntries', async () => {
-      await expect(
-        contract.getEntries(user1.address, 0, 99),
-      ).to.be.revertedWith('end out of range');
+      await expect(contract.getEntries(user1.address, 0, 99)).to.be.revertedWith(
+        'end out of range',
+      );
     });
 
     it('should revert when batch exceeds MAX_BATCH_SIZE', async () => {
@@ -179,22 +166,18 @@ describe('EternalJournalPureOnChainV2', () => {
 
     it('should revert if non-admin calls withdraw', async () => {
       await contract.connect(user1).addEntry(sampleCiphertext, { value: FEE });
-      await expect(
-        contract.connect(user1).withdraw(user1.address),
-      ).to.be.reverted;
+      await expect(contract.connect(user1).withdraw(user1.address)).to.be.reverted;
     });
 
     it('should revert when no funds to withdraw', async () => {
-      await expect(
-        contract.connect(admin).withdraw(admin.address),
-      ).to.be.revertedWith('No funds');
+      await expect(contract.connect(admin).withdraw(admin.address)).to.be.revertedWith('No funds');
     });
 
     it('should revert when withdrawing to zero address', async () => {
       await contract.connect(user1).addEntry(sampleCiphertext, { value: FEE });
-      await expect(
-        contract.connect(admin).withdraw(ethers.ZeroAddress),
-      ).to.be.revertedWith('Invalid address');
+      await expect(contract.connect(admin).withdraw(ethers.ZeroAddress)).to.be.revertedWith(
+        'Invalid address',
+      );
     });
   });
 
@@ -213,9 +196,8 @@ describe('EternalJournalPureOnChainV2', () => {
 
     it('should block addEntry when paused', async () => {
       await contract.connect(pauser).pause();
-      await expect(
-        contract.connect(user1).addEntry(sampleCiphertext, { value: FEE }),
-      ).to.be.reverted;
+      await expect(contract.connect(user1).addEntry(sampleCiphertext, { value: FEE })).to.be
+        .reverted;
     });
 
     it('should allow addEntry after unpause', async () => {
@@ -228,39 +210,29 @@ describe('EternalJournalPureOnChainV2', () => {
 
   describe('UUPS Upgrade', () => {
     it('should allow upgrader to authorize upgrades', async () => {
-      const V2Factory = await ethers.getContractFactory(
-        'EternalJournalPureOnChainV2',
-      );
+      const V2Factory = await ethers.getContractFactory('EternalJournalPureOnChainV2');
       // Upgrading to same implementation just to validate the auth check
       const upgraded = await upgrades.upgradeProxy(
         await contract.getAddress(),
         V2Factory.connect(upgrader),
         { kind: 'uups' },
       );
-      expect(await upgraded.getAddress()).to.equal(
-        await contract.getAddress(),
-      );
+      expect(await upgraded.getAddress()).to.equal(await contract.getAddress());
     });
 
     it('should revert upgrade from non-upgrader', async () => {
-      const V2Factory = await ethers.getContractFactory(
-        'EternalJournalPureOnChainV2',
-      );
+      const V2Factory = await ethers.getContractFactory('EternalJournalPureOnChainV2');
       await expect(
-        upgrades.upgradeProxy(
-          await contract.getAddress(),
-          V2Factory.connect(user1),
-          { kind: 'uups' },
-        ),
+        upgrades.upgradeProxy(await contract.getAddress(), V2Factory.connect(user1), {
+          kind: 'uups',
+        }),
       ).to.be.reverted;
     });
 
     it('should preserve state after upgrade', async () => {
       await contract.connect(user1).addEntry(sampleCiphertext, { value: FEE });
 
-      const V2Factory = await ethers.getContractFactory(
-        'EternalJournalPureOnChainV2',
-      );
+      const V2Factory = await ethers.getContractFactory('EternalJournalPureOnChainV2');
       const upgraded = (await upgrades.upgradeProxy(
         await contract.getAddress(),
         V2Factory.connect(upgrader),
@@ -269,9 +241,7 @@ describe('EternalJournalPureOnChainV2', () => {
 
       expect(await upgraded.getEntryCount(user1.address)).to.equal(1);
       const entry = await upgraded.getEntry(user1.address, 0);
-      expect(ethers.toUtf8String(entry.ciphertext)).to.equal(
-        'encrypted-v2-entry',
-      );
+      expect(ethers.toUtf8String(entry.ciphertext)).to.equal('encrypted-v2-entry');
     });
   });
 });

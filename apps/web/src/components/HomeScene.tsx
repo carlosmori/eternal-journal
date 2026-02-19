@@ -8,7 +8,6 @@ interface HomeSceneProps {
 }
 
 export default function HomeScene({ isOpening }: HomeSceneProps) {
-
   return (
     <div className="absolute inset-0 z-0 overflow-hidden">
       {/* Animated gradient mesh background */}

@@ -13,7 +13,16 @@ interface Quote {
 
 function ShuffleIcon() {
   return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
       <polyline points="16 3 21 3 21 8" />
       <line x1="4" x2="21" y1="20" y2="3" />
       <polyline points="21 16 21 21 16 21" />
@@ -36,12 +45,9 @@ export function CommunityQuote() {
     isFetchingRef.current = true;
 
     try {
-      const excludeParam = seenIdsRef.current.size > 0
-        ? `&exclude=${Array.from(seenIdsRef.current).join(',')}`
-        : '';
-      const res = await fetch(
-        `${API_URL}/shared-quotes/batch?count=${BATCH_SIZE}${excludeParam}`,
-      );
+      const excludeParam =
+        seenIdsRef.current.size > 0 ? `&exclude=${Array.from(seenIdsRef.current).join(',')}` : '';
+      const res = await fetch(`${API_URL}/shared-quotes/batch?count=${BATCH_SIZE}${excludeParam}`);
       if (!res.ok) return;
       const data: { quotes: Quote[] } = await res.json();
 

@@ -35,7 +35,7 @@ const config: Config = {
           '0%': { opacity: '0', transform: 'translateY(12px)' },
           '100%': { opacity: '1', transform: 'translateY(0)' },
         },
-        'float': {
+        float: {
           '0%, 100%': { transform: 'translateY(0)' },
           '50%': { transform: 'translateY(-6px)' },
         },
@@ -46,7 +46,7 @@ const config: Config = {
       },
       animation: {
         'fade-in-up': 'fade-in-up 0.5s ease-out',
-        'float': 'float 3s ease-in-out infinite',
+        float: 'float 3s ease-in-out infinite',
         'glow-pulse': 'glow-pulse 3s ease-in-out infinite',
       },
     },

@@ -6,11 +6,11 @@ Web3 is an optional feature, not the main path. The app is fully functional as a
 
 There are three ways to use it:
 
-| Mode | Auth | Storage | Editable |
-|------|------|---------|----------|
-| **Guest** | None | Browser localStorage | Yes |
-| **Web2** | Google OAuth | PostgreSQL (encrypted) | Yes |
-| **Web3** | Wallet (RainbowKit) | Base blockchain (encrypted) | No (immutable) |
+| Mode      | Auth                | Storage                     | Editable       |
+| --------- | ------------------- | --------------------------- | -------------- |
+| **Guest** | None                | Browser localStorage        | Yes            |
+| **Web2**  | Google OAuth        | PostgreSQL (encrypted)      | Yes            |
+| **Web3**  | Wallet (RainbowKit) | Base blockchain (encrypted) | No (immutable) |
 
 The app also has a community feature: users can share anonymous quotes from their journal entries, which go through admin moderation before appearing on the landing page.
 
@@ -109,13 +109,13 @@ flowchart TB
     SvcStg --> RDSStg
 ```
 
-| | Staging | Production |
-|---|---|---|
-| **ECS Service** | `api-service-stg` | `api-service` |
-| **Task Definition** | `eternal-journal-api-stg` | `eternal-journal-api-prod` |
-| **ALB Port** | `:8080` | `:80` |
-| **Target Group** | `eternal-journal-api-tg` | `eternal-journal-api-tg-prod` |
-| **RDS Instance** | `eternaljournal-db-stg` | `eternaljournal-db` |
+|                     | Staging                   | Production                    |
+| ------------------- | ------------------------- | ----------------------------- |
+| **ECS Service**     | `api-service-stg`         | `api-service`                 |
+| **Task Definition** | `eternal-journal-api-stg` | `eternal-journal-api-prod`    |
+| **ALB Port**        | `:8080`                   | `:80`                         |
+| **Target Group**    | `eternal-journal-api-tg`  | `eternal-journal-api-tg-prod` |
+| **RDS Instance**    | `eternaljournal-db-stg`   | `eternaljournal-db`           |
 
 ### Frontend -- AWS Amplify
 

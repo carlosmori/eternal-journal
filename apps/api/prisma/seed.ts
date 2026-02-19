@@ -25,8 +25,7 @@ const SAMPLE_ENTRIES = [
   {
     date: '2025-02-16',
     title: 'El primer paso',
-    description:
-      'El viaje de mil millas comienza con un solo paso. Hoy decidí empezar.',
+    description: 'El viaje de mil millas comienza con un solo paso. Hoy decidí empezar.',
     timestamp: Math.floor(new Date('2025-02-16T10:00:00').getTime() / 1000),
   },
   {
@@ -116,8 +115,7 @@ const SAMPLE_ENTRIES = [
   {
     date: '2025-02-03',
     title: 'Generosidad',
-    description:
-      'Alguien me ayudó sin que se lo pidiera. Mañana quiero ser esa persona para otro.',
+    description: 'Alguien me ayudó sin que se lo pidiera. Mañana quiero ser esa persona para otro.',
     timestamp: Math.floor(new Date('2025-02-03T13:20:00').getTime() / 1000),
   },
   {
@@ -140,9 +138,7 @@ async function main() {
   const users = await prisma.user.findMany();
 
   if (users.length === 0) {
-    console.log(
-      'No hay usuarios en la base de datos. Hacé login primero para crear uno.',
-    );
+    console.log('No hay usuarios en la base de datos. Hacé login primero para crear uno.');
     return;
   }
 
@@ -151,9 +147,7 @@ async function main() {
       where: { userId: user.id },
     });
     if (existingCount > 0) {
-      console.log(
-        `⊘ User ${user.email} ya tiene ${existingCount} entradas. Saltando.`,
-      );
+      console.log(`⊘ User ${user.email} ya tiene ${existingCount} entradas. Saltando.`);
       continue;
     }
 

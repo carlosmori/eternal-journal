@@ -34,20 +34,12 @@ export class NetworkingStack extends cdk.Stack {
       vpc: this.vpc,
       description: 'ECS tasks - allows inbound from ALB',
     });
-    this.ecsSecurityGroup.addIngressRule(
-      this.albSecurityGroup,
-      ec2.Port.tcp(3001),
-      'ALB to ECS',
-    );
+    this.ecsSecurityGroup.addIngressRule(this.albSecurityGroup, ec2.Port.tcp(3001), 'ALB to ECS');
 
     this.rdsSecurityGroup = new ec2.SecurityGroup(this, 'RdsSg', {
       vpc: this.vpc,
       description: 'RDS - allows inbound from ECS tasks',
     });
-    this.rdsSecurityGroup.addIngressRule(
-      this.ecsSecurityGroup,
-      ec2.Port.tcp(5432),
-      'ECS to RDS',
-    );
+    this.rdsSecurityGroup.addIngressRule(this.ecsSecurityGroup, ec2.Port.tcp(5432), 'ECS to RDS');
   }
 }

@@ -29,9 +29,7 @@ export function DiaryContainer({ children, entryCount }: DiaryContainerProps) {
         </div>
 
         {/* Diary content */}
-        <div className="p-3 sm:p-4">
-          {children}
-        </div>
+        <div className="p-3 sm:p-4">{children}</div>
       </div>
     </div>
   );

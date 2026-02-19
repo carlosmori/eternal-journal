@@ -49,11 +49,7 @@ function Book({ isOpening, onOpenComplete }: BookProps) {
         -0.05,
         delta * 2,
       );
-      bookRef.current.rotation.y = THREE.MathUtils.lerp(
-        bookRef.current.rotation.y,
-        0,
-        delta * 2,
-      );
+      bookRef.current.rotation.y = THREE.MathUtils.lerp(bookRef.current.rotation.y, 0, delta * 2);
 
       if (t >= 0.92 && !completedRef.current) {
         completedRef.current = true;
@@ -86,11 +82,7 @@ function Book({ isOpening, onOpenComplete }: BookProps) {
       {[...Array(5)].map((_, i) => (
         <mesh
           key={i}
-          position={[
-            PAGES_W / 2 + 0.035,
-            0,
-            -PAGES_D / 2 + (PAGES_D / 5) * i + PAGES_D / 10,
-          ]}
+          position={[PAGES_W / 2 + 0.035, 0, -PAGES_D / 2 + (PAGES_D / 5) * i + PAGES_D / 10]}
           rotation={[0, Math.PI / 2, 0]}
         >
           <planeGeometry args={[PAGES_D / 6, PAGES_H * 0.92]} />
@@ -105,10 +97,7 @@ function Book({ isOpening, onOpenComplete }: BookProps) {
       </mesh>
 
       {/* Front cover -- pivots at spine (left edge) */}
-      <group
-        ref={frontCoverRef}
-        position={[-(COVER_W / 2), 0, PAGES_D / 2 + COVER_D / 2]}
-      >
+      <group ref={frontCoverRef} position={[-(COVER_W / 2), 0, PAGES_D / 2 + COVER_D / 2]}>
         {/* Cover body */}
         <mesh position={[COVER_W / 2, 0, 0]}>
           <boxGeometry args={[COVER_W, COVER_H, COVER_D]} />
@@ -118,12 +107,7 @@ function Book({ isOpening, onOpenComplete }: BookProps) {
         {/* Subtle decorative rectangle on cover face */}
         <mesh position={[COVER_W / 2, 0, COVER_D / 2 + 0.001]}>
           <planeGeometry args={[COVER_W * 0.65, COVER_H * 0.65]} />
-          <meshStandardMaterial
-            color={ACCENT_COLOR}
-            transparent
-            opacity={0.12}
-            roughness={0.5}
-          />
+          <meshStandardMaterial color={ACCENT_COLOR} transparent opacity={0.12} roughness={0.5} />
         </mesh>
 
         {/* Inner border accent */}
@@ -152,26 +136,26 @@ interface DiarySceneProps {
 export default function DiaryScene({ isOpening, onOpenComplete }: DiarySceneProps) {
   return (
     <div style={{ position: 'absolute', inset: 0 }}>
-    <Canvas
-      camera={{ position: [0, 1.2, 4.5], fov: 35 }}
-      dpr={[1, 2]}
-      gl={{ alpha: true, antialias: true }}
-    >
-      {/* Lighting */}
-      <ambientLight intensity={0.5} />
-      <directionalLight position={[5, 5, 5]} intensity={0.8} />
-      <pointLight position={[-3, 2, 4]} intensity={0.4} color="#a78bfa" />
-      <pointLight position={[2, -1, 3]} intensity={0.15} color="#e9d5ff" />
+      <Canvas
+        camera={{ position: [0, 1.2, 4.5], fov: 35 }}
+        dpr={[1, 2]}
+        gl={{ alpha: true, antialias: true }}
+      >
+        {/* Lighting */}
+        <ambientLight intensity={0.5} />
+        <directionalLight position={[5, 5, 5]} intensity={0.8} />
+        <pointLight position={[-3, 2, 4]} intensity={0.4} color="#a78bfa" />
+        <pointLight position={[2, -1, 3]} intensity={0.15} color="#e9d5ff" />
 
-      {/* Book */}
-      <Book isOpening={isOpening} onOpenComplete={onOpenComplete} />
+        {/* Book */}
+        <Book isOpening={isOpening} onOpenComplete={onOpenComplete} />
 
-      {/* Soft ground plane */}
-      <mesh position={[0, -0.78, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-        <planeGeometry args={[8, 8]} />
-        <meshBasicMaterial color="#1a0535" transparent opacity={0.4} />
-      </mesh>
-    </Canvas>
+        {/* Soft ground plane */}
+        <mesh position={[0, -0.78, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+          <planeGeometry args={[8, 8]} />
+          <meshBasicMaterial color="#1a0535" transparent opacity={0.4} />
+        </mesh>
+      </Canvas>
     </div>
   );
 }

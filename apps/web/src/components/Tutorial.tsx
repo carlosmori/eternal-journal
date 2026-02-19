@@ -27,7 +27,7 @@ const steps = [
   {
     title: 'Just yours',
     description:
-      "Only you can read your entries. Your wallet keeps the key\u2014no passwords, no accounts. \u2665",
+      'Only you can read your entries. Your wallet keeps the key\u2014no passwords, no accounts. \u2665',
     icon: (
       <svg
         width="28"
@@ -158,9 +158,7 @@ export function Tutorial({ onComplete }: TutorialProps) {
               }}
               transition={{ duration: 0.3 }}
               className={`h-2 rounded-full ${
-                i === step
-                  ? 'bg-violet-500 dark:bg-violet-400'
-                  : 'bg-violet-300 dark:bg-violet-600'
+                i === step ? 'bg-violet-500 dark:bg-violet-400' : 'bg-violet-300 dark:bg-violet-600'
               }`}
             />
           ))}

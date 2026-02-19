@@ -29,11 +29,11 @@ Prisma is the ORM (Object-Relational Mapper) that sits between the NestJS API an
 
 ### Database models
 
-| Model | Purpose | Key fields |
-|-------|---------|------------|
-| **User** | Google OAuth users | `id` (cuid), `googleId` (unique), `email`, `name`, `picture` |
-| **JournalEntry** | Encrypted journal entries per user | `id` (cuid), `userId` (FK), `ciphertext` (Base64 AES-256-GCM encrypted), `timestamp` |
-| **SharedQuote** | Anonymously shared quotes for community | `id` (cuid), `userId` (FK), `ciphertext` (admin-encrypted), `sourceEntryId`, `status` (PENDING/APPROVED/REJECTED) |
+| Model            | Purpose                                 | Key fields                                                                                                        |
+| ---------------- | --------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| **User**         | Google OAuth users                      | `id` (cuid), `googleId` (unique), `email`, `name`, `picture`                                                      |
+| **JournalEntry** | Encrypted journal entries per user      | `id` (cuid), `userId` (FK), `ciphertext` (Base64 AES-256-GCM encrypted), `timestamp`                              |
+| **SharedQuote**  | Anonymously shared quotes for community | `id` (cuid), `userId` (FK), `ciphertext` (admin-encrypted), `sourceEntryId`, `status` (PENDING/APPROVED/REJECTED) |
 
 ---
 
@@ -56,6 +56,7 @@ docker run -d \
 ```
 
 This creates a container named `eternal-journal-db` with:
+
 - Port: 5432 (default PostgreSQL port)
 - User: `postgres`
 - Password: `postgres`
@@ -77,6 +78,7 @@ yarn prisma migrate dev --name init
 ```
 
 This will:
+
 1. Create the `User` and `JournalEntry` tables
 2. Generate the Prisma Client
 
@@ -156,14 +158,14 @@ Production uses RDS PostgreSQL inside a private VPC for security.
 
 Same as staging, but with these differences:
 
-| Setting | Staging | Production |
-|---------|---------|------------|
-| **Public access** | Yes | **No** |
-| **Instance class** | db.t3.micro | db.t3.small or larger |
-| **Multi-AZ** | No | Yes (for high availability) |
-| **Storage** | 20 GB | 50+ GB with auto-scaling |
-| **Backup retention** | 1 day | 7+ days |
-| **Encryption** | Optional | **Enabled** |
+| Setting              | Staging     | Production                  |
+| -------------------- | ----------- | --------------------------- |
+| **Public access**    | Yes         | **No**                      |
+| **Instance class**   | db.t3.micro | db.t3.small or larger       |
+| **Multi-AZ**         | No          | Yes (for high availability) |
+| **Storage**          | 20 GB       | 50+ GB with auto-scaling    |
+| **Backup retention** | 1 day       | 7+ days                     |
+| **Encryption**       | Optional    | **Enabled**                 |
 
 ### Step 2: Security
 
@@ -197,8 +199,8 @@ CMD ["sh", "-c", "npx prisma migrate deploy && node dist/main.js"]
 
 ## Summary
 
-| Environment | Database | Access | Migrations | Connection |
-|-------------|----------|--------|------------|------------|
-| **Dev** | Docker (local) | localhost:5432 | `prisma migrate dev` | Direct |
-| **Staging** | RDS (public) | RDS endpoint | `prisma migrate deploy` | Direct |
-| **Prod** | RDS (private VPC) | Internal only | `prisma migrate deploy` (CI/CD) | Via VPC |
+| Environment | Database          | Access         | Migrations                      | Connection |
+| ----------- | ----------------- | -------------- | ------------------------------- | ---------- |
+| **Dev**     | Docker (local)    | localhost:5432 | `prisma migrate dev`            | Direct     |
+| **Staging** | RDS (public)      | RDS endpoint   | `prisma migrate deploy`         | Direct     |
+| **Prod**    | RDS (private VPC) | Internal only  | `prisma migrate deploy` (CI/CD) | Via VPC    |

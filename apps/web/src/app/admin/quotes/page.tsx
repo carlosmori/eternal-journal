@@ -25,28 +25,31 @@ export default function AdminQuotesPage() {
 
   const isAdmin = !!ADMIN_EMAIL && web2User?.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase();
 
-  const fetchQuotes = useCallback(async (status: StatusFilter) => {
-    if (!jwt) return;
-    setIsLoading(true);
-    setError('');
-    try {
-      const res = await fetch(`${API_URL}/admin/shared-quotes?status=${status}`, {
-        headers: { Authorization: `Bearer ${jwt}` },
-      });
-      if (res.status === 403) {
-        setError('Access denied. Admin privileges required.');
-        setQuotes([]);
-        return;
+  const fetchQuotes = useCallback(
+    async (status: StatusFilter) => {
+      if (!jwt) return;
+      setIsLoading(true);
+      setError('');
+      try {
+        const res = await fetch(`${API_URL}/admin/shared-quotes?status=${status}`, {
+          headers: { Authorization: `Bearer ${jwt}` },
+        });
+        if (res.status === 403) {
+          setError('Access denied. Admin privileges required.');
+          setQuotes([]);
+          return;
+        }
+        if (!res.ok) throw new Error('Failed to fetch');
+        const data = await res.json();
+        setQuotes(Array.isArray(data) ? data : (data.quotes ?? []));
+      } catch {
+        setError('Failed to load quotes.');
+      } finally {
+        setIsLoading(false);
       }
-      if (!res.ok) throw new Error('Failed to fetch');
-      const data = await res.json();
-      setQuotes(Array.isArray(data) ? data : data.quotes ?? []);
-    } catch {
-      setError('Failed to load quotes.');
-    } finally {
-      setIsLoading(false);
-    }
-  }, [jwt]);
+    },
+    [jwt],
+  );
 
   useEffect(() => {
     if (jwt && isAdmin) {
@@ -56,23 +59,26 @@ export default function AdminQuotesPage() {
     }
   }, [jwt, isAdmin, filter, fetchQuotes]);
 
-  const handleReview = useCallback(async (quoteId: string, status: 'APPROVED' | 'REJECTED') => {
-    if (!jwt) return;
-    try {
-      const res = await fetch(`${API_URL}/admin/shared-quotes/${quoteId}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${jwt}`,
-        },
-        body: JSON.stringify({ status }),
-      });
-      if (!res.ok) throw new Error('Failed');
-      setQuotes((prev) => prev.filter((q) => q.id !== quoteId));
-    } catch {
-      setError('Failed to update quote.');
-    }
-  }, [jwt]);
+  const handleReview = useCallback(
+    async (quoteId: string, status: 'APPROVED' | 'REJECTED') => {
+      if (!jwt) return;
+      try {
+        const res = await fetch(`${API_URL}/admin/shared-quotes/${quoteId}`, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${jwt}`,
+          },
+          body: JSON.stringify({ status }),
+        });
+        if (!res.ok) throw new Error('Failed');
+        setQuotes((prev) => prev.filter((q) => q.id !== quoteId));
+      } catch {
+        setError('Failed to update quote.');
+      }
+    },
+    [jwt],
+  );
 
   const pendingCount = useMemo(
     () => (filter === 'PENDING' ? quotes.length : null),
@@ -110,7 +116,16 @@ export default function AdminQuotesPage() {
               href="/journal"
               className="text-violet-500 dark:text-violet-400 hover:text-violet-700 dark:hover:text-violet-200 transition-colors"
             >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <svg
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
                 <path d="m15 18-6-6 6-6" />
               </svg>
             </a>
@@ -139,9 +154,7 @@ export default function AdminQuotesPage() {
 
       {/* Content */}
       <div className="max-w-3xl mx-auto px-4 py-6 space-y-4">
-        {error && (
-          <p className="text-sm text-red-500 dark:text-red-400 text-center">{error}</p>
-        )}
+        {error && <p className="text-sm text-red-500 dark:text-red-400 text-center">{error}</p>}
 
         {isLoading && (
           <div className="flex justify-center py-12">
@@ -188,7 +201,16 @@ export default function AdminQuotesPage() {
                       onClick={() => handleReview(quote.id, 'APPROVED')}
                       className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-emerald-700 dark:text-emerald-300 bg-emerald-100/60 dark:bg-emerald-900/30 hover:bg-emerald-200/80 dark:hover:bg-emerald-800/40 transition-colors"
                     >
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <svg
+                        width="12"
+                        height="12"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
                         <polyline points="20 6 9 17 4 12" />
                       </svg>
                       Approve
@@ -197,7 +219,16 @@ export default function AdminQuotesPage() {
                       onClick={() => handleReview(quote.id, 'REJECTED')}
                       className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-red-700 dark:text-red-300 bg-red-100/60 dark:bg-red-900/30 hover:bg-red-200/80 dark:hover:bg-red-800/40 transition-colors"
                     >
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <svg
+                        width="12"
+                        height="12"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
                         <line x1="18" x2="6" y1="6" y2="18" />
                         <line x1="6" x2="18" y1="6" y2="18" />
                       </svg>
@@ -206,11 +237,13 @@ export default function AdminQuotesPage() {
                   </div>
                 )}
                 {filter !== 'PENDING' && (
-                  <span className={`text-xs font-medium px-2 py-0.5 rounded-md ${
-                    quote.status === 'APPROVED'
-                      ? 'bg-emerald-100/80 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300'
-                      : 'bg-red-100/80 dark:bg-red-900/30 text-red-700 dark:text-red-300'
-                  }`}>
+                  <span
+                    className={`text-xs font-medium px-2 py-0.5 rounded-md ${
+                      quote.status === 'APPROVED'
+                        ? 'bg-emerald-100/80 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300'
+                        : 'bg-red-100/80 dark:bg-red-900/30 text-red-700 dark:text-red-300'
+                    }`}
+                  >
                     {quote.status}
                   </span>
                 )}

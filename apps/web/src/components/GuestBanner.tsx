@@ -32,8 +32,7 @@ export function GuestBanner({ onOpenSignIn }: GuestBannerProps) {
           <span className="text-sm font-medium">Guest mode</span>
         </div>
         <p className="text-sm text-violet-700 dark:text-violet-300 flex-1">
-          Your entries are saved only on this device. Sign in to keep them
-          everywhere.
+          Your entries are saved only on this device. Sign in to keep them everywhere.
         </p>
         {onOpenSignIn && (
           <button

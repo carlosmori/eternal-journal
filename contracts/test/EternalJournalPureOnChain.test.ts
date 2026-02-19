@@ -34,9 +34,7 @@ describe('EternalJournalPureOnChain', () => {
 
   describe('addEntry', () => {
     it('should add an entry with correct fee', async () => {
-      await expect(
-        contract.connect(user1).addEntry(sampleCiphertext, { value: FEE }),
-      )
+      await expect(contract.connect(user1).addEntry(sampleCiphertext, { value: FEE }))
         .to.emit(contract, 'NewEntry')
         .withArgs(user1.address, 0, () => true);
 
@@ -51,17 +49,15 @@ describe('EternalJournalPureOnChain', () => {
 
     it('should revert with overpayment', async () => {
       await expect(
-        contract
-          .connect(user1)
-          .addEntry(sampleCiphertext, { value: FEE + 1n }),
+        contract.connect(user1).addEntry(sampleCiphertext, { value: FEE + 1n }),
       ).to.be.revertedWith('Incorrect fee');
     });
 
     it('should revert when ciphertext exceeds MAX_ENTRY_BYTES', async () => {
       const oversized = new Uint8Array(1025);
-      await expect(
-        contract.connect(user1).addEntry(oversized, { value: FEE }),
-      ).to.be.revertedWith('Entry too large');
+      await expect(contract.connect(user1).addEntry(oversized, { value: FEE })).to.be.revertedWith(
+        'Entry too large',
+      );
     });
 
     it('should store multiple entries per user', async () => {
@@ -82,16 +78,12 @@ describe('EternalJournalPureOnChain', () => {
     it('should return the stored entry data', async () => {
       await contract.connect(user1).addEntry(sampleCiphertext, { value: FEE });
       const entry = await contract.getEntry(user1.address, 0);
-      expect(ethers.toUtf8String(entry.ciphertext)).to.equal(
-        'encrypted-journal-entry-data',
-      );
+      expect(ethers.toUtf8String(entry.ciphertext)).to.equal('encrypted-journal-entry-data');
       expect(entry.timestamp).to.be.greaterThan(0);
     });
 
     it('should revert for out-of-range index', async () => {
-      await expect(
-        contract.getEntry(user1.address, 0),
-      ).to.be.revertedWith('Index out of range');
+      await expect(contract.getEntry(user1.address, 0)).to.be.revertedWith('Index out of range');
     });
   });
 
@@ -109,9 +101,10 @@ describe('EternalJournalPureOnChain', () => {
     });
 
     it('should revert if non-owner calls setFee', async () => {
-      await expect(
-        contract.connect(user1).setFee(0),
-      ).to.be.revertedWithCustomError(contract, 'OwnableUnauthorizedAccount');
+      await expect(contract.connect(user1).setFee(0)).to.be.revertedWithCustomError(
+        contract,
+        'OwnableUnauthorizedAccount',
+      );
     });
 
     it('should enforce updated fee on addEntry', async () => {
@@ -120,9 +113,7 @@ describe('EternalJournalPureOnChain', () => {
       await expect(
         contract.connect(user1).addEntry(sampleCiphertext, { value: FEE }),
       ).to.be.revertedWith('Incorrect fee');
-      await contract
-        .connect(user1)
-        .addEntry(sampleCiphertext, { value: newFee });
+      await contract.connect(user1).addEntry(sampleCiphertext, { value: newFee });
       expect(await contract.getEntryCount(user1.address)).to.equal(1);
     });
   });
@@ -143,15 +134,14 @@ describe('EternalJournalPureOnChain', () => {
 
     it('should revert if non-owner calls withdraw', async () => {
       await contract.connect(user1).addEntry(sampleCiphertext, { value: FEE });
-      await expect(
-        contract.connect(user1).withdraw(),
-      ).to.be.revertedWithCustomError(contract, 'OwnableUnauthorizedAccount');
+      await expect(contract.connect(user1).withdraw()).to.be.revertedWithCustomError(
+        contract,
+        'OwnableUnauthorizedAccount',
+      );
     });
 
     it('should revert when no funds to withdraw', async () => {
-      await expect(
-        contract.connect(owner).withdraw(),
-      ).to.be.revertedWith('No funds');
+      await expect(contract.connect(owner).withdraw()).to.be.revertedWith('No funds');
     });
   });
 });

@@ -85,7 +85,9 @@ async function proxy(req: NextRequest, { params }: { params: Promise<{ path: str
 
   // Forward ALL Set-Cookie headers individually.
   // headers.get('set-cookie') silently collapses multiples — use getSetCookie() instead.
-  const cookies = (backendRes.headers as unknown as { getSetCookie?: () => string[] }).getSetCookie?.();
+  const cookies = (
+    backendRes.headers as unknown as { getSetCookie?: () => string[] }
+  ).getSetCookie?.();
   if (cookies) {
     for (const c of cookies) {
       resHeaders.append('set-cookie', c);

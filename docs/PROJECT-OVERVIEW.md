@@ -16,12 +16,12 @@ In short: **eternal + private + on-chain journal**.
 
 ## Core Concept
 
-| Question | Answer |
-|----------|--------|
+| Question                        | Answer                                                                                                                           |
+| ------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
 | **What problem does it solve?** | Provides a permanent, private place for your thoughts, without relying on a central server that could go down or censor content. |
-| **How does it work?** | Connect your wallet, sign once to unlock, and write. Each entry is encrypted locally and stored in a smart contract. |
-| **Why blockchain?** | Immutability (no one can delete anything), decentralization (no single owner of the data), and contract transparency. |
-| **What does the user pay?** | A fixed fee per entry (e.g. ~0.00005 ETH) + network gas. The fee goes to the contract owner; gas goes to the network. |
+| **How does it work?**           | Connect your wallet, sign once to unlock, and write. Each entry is encrypted locally and stored in a smart contract.             |
+| **Why blockchain?**             | Immutability (no one can delete anything), decentralization (no single owner of the data), and contract transparency.            |
+| **What does the user pay?**     | A fixed fee per entry (e.g. ~0.00005 ETH) + network gas. The fee goes to the contract owner; gas goes to the network.            |
 
 ---
 
@@ -59,16 +59,16 @@ In short: **eternal + private + on-chain journal**.
 
 ## Tech Stack
 
-| Layer | Technology | Purpose |
-|-------|------------|---------|
-| **Frontend** | Next.js 14, React 18 | App Router, pages, components |
-| **Styling** | Tailwind CSS | Utility-first, dark/light mode |
-| **Animations** | Framer Motion | Transitions, micro-interactions |
-| **3D** | Three.js, React Three Fiber | Background scene (particles, torus, hex grid) |
-| **Web3** | wagmi, viem, RainbowKit | Wallet connection, contract read/write |
-| **Blockchain** | Base Sepolia | Coinbase L2 (testnet for MVP) |
-| **Smart contract** | Solidity ^0.8.20, Hardhat | EternalJournalPureOnChain contract |
-| **Encryption** | @noble/ciphers, @noble/hashes | AES-256-GCM, SHA-256 |
+| Layer              | Technology                    | Purpose                                       |
+| ------------------ | ----------------------------- | --------------------------------------------- |
+| **Frontend**       | Next.js 14, React 18          | App Router, pages, components                 |
+| **Styling**        | Tailwind CSS                  | Utility-first, dark/light mode                |
+| **Animations**     | Framer Motion                 | Transitions, micro-interactions               |
+| **3D**             | Three.js, React Three Fiber   | Background scene (particles, torus, hex grid) |
+| **Web3**           | wagmi, viem, RainbowKit       | Wallet connection, contract read/write        |
+| **Blockchain**     | Base Sepolia                  | Coinbase L2 (testnet for MVP)                 |
+| **Smart contract** | Solidity ^0.8.20, Hardhat     | EternalJournalPureOnChain contract            |
+| **Encryption**     | @noble/ciphers, @noble/hashes | AES-256-GCM, SHA-256                          |
 
 ### Main Dependencies (web)
 
@@ -109,23 +109,23 @@ eternal-journal/
 
 ### Main Routes
 
-| Route | Description |
-|-------|-------------|
-| `/` | Home with 3D scene, "Open your journal" CTA |
+| Route      | Description                                                         |
+| ---------- | ------------------------------------------------------------------- |
+| `/`        | Home with 3D scene, "Open your journal" CTA                         |
 | `/journal` | Entry list, filters, views (list/timeline/grid/calendar), favorites |
 
 ---
 
 ## Key Frontend Components
 
-| Component | Role |
-|-----------|------|
-| `UniverseScene` | 3D background scene (torus, particles, hex grid) |
-| `QuoteCard` | Entry card with title, description, date, actions (copy, share, favorite) |
-| `AddQuoteModal` | Modal to create entry (date, title, description) |
-| `JournalFilters` | Search, date filters (this week, this month, this year), favorites |
-| `JournalViews` | Views: List, Timeline, Grid, Calendar |
-| `useFavorites` | Hook for favorites in localStorage (per wallet) |
+| Component        | Role                                                                      |
+| ---------------- | ------------------------------------------------------------------------- |
+| `UniverseScene`  | 3D background scene (torus, particles, hex grid)                          |
+| `QuoteCard`      | Entry card with title, description, date, actions (copy, share, favorite) |
+| `AddQuoteModal`  | Modal to create entry (date, title, description)                          |
+| `JournalFilters` | Search, date filters (this week, this month, this year), favorites        |
+| `JournalViews`   | Views: List, Timeline, Grid, Calendar                                     |
+| `useFavorites`   | Hook for favorites in localStorage (per wallet)                           |
 
 ---
 

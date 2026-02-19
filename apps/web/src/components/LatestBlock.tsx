@@ -4,7 +4,9 @@ import { useEffect, useState } from 'react';
 import { sepoliaPublicClient } from '@/lib/sepoliaClient';
 
 export function LatestBlock() {
-  const [block, setBlock] = useState<{ number: bigint; hash: string; timestamp: bigint } | null>(null);
+  const [block, setBlock] = useState<{ number: bigint; hash: string; timestamp: bigint } | null>(
+    null,
+  );
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -22,9 +24,7 @@ export function LatestBlock() {
 
   if (error) {
     return (
-      <div className="glass-card p-4 text-sm text-red-500 dark:text-red-400">
-        Error: {error}
-      </div>
+      <div className="glass-card p-4 text-sm text-red-500 dark:text-red-400">Error: {error}</div>
     );
   }
 
@@ -42,8 +42,7 @@ export function LatestBlock() {
         Latest block (Base Sepolia)
       </p>
       <p>
-        <span className="text-violet-600 dark:text-violet-400">#</span>{' '}
-        {block.number.toString()}
+        <span className="text-violet-600 dark:text-violet-400">#</span> {block.number.toString()}
       </p>
       <p className="truncate mt-1 text-violet-700 dark:text-violet-300 font-mono text-xs">
         {block.hash}

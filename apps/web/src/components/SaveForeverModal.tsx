@@ -2,10 +2,23 @@
 
 import { useEffect, useState, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { useAccount, useSignMessage, useWriteContract, useReadContract, useWaitForTransactionReceipt } from 'wagmi';
+import {
+  useAccount,
+  useSignMessage,
+  useWriteContract,
+  useReadContract,
+  useWaitForTransactionReceipt,
+} from 'wagmi';
 import { useConnectModal } from '@rainbow-me/rainbowkit';
 import { bytesToHex, formatEther } from 'viem';
-import { encryptEntry, estimateBytes, MAX_ENTRY_BYTES, SIGN_MESSAGE, deriveKey, type JournalEntry } from '@/lib/crypto';
+import {
+  encryptEntry,
+  estimateBytes,
+  MAX_ENTRY_BYTES,
+  SIGN_MESSAGE,
+  deriveKey,
+  type JournalEntry,
+} from '@/lib/crypto';
 import { ETERNAL_JOURNAL_ABI, ETERNAL_JOURNAL_ADDRESS } from '@/lib/contract';
 
 type Step = 'explain' | 'connect' | 'unlock' | 'saving' | 'done';
@@ -19,7 +32,14 @@ interface SaveForeverModalProps {
   onOpenSignIn?: () => void;
 }
 
-export function SaveForeverModal({ isOpen, onClose, onSuccess, entry, requiresGoogleAuth = false, onOpenSignIn }: SaveForeverModalProps) {
+export function SaveForeverModal({
+  isOpen,
+  onClose,
+  onSuccess,
+  entry,
+  requiresGoogleAuth = false,
+  onOpenSignIn,
+}: SaveForeverModalProps) {
   const [step, setStep] = useState<Step>('explain');
   const [message, setMessage] = useState('');
   const [encryptionKey, setEncryptionKey] = useState<Uint8Array | null>(null);
@@ -178,7 +198,14 @@ export function SaveForeverModal({ isOpen, onClose, onSuccess, entry, requiresGo
               className="w-8 h-8 rounded-lg flex items-center justify-center text-violet-500 dark:text-violet-400 hover:bg-violet-200/30 dark:hover:bg-violet-800/30 transition-colors"
               aria-label="Close"
             >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+              >
                 <path d="M18 6L6 18" />
                 <path d="M6 6l12 12" />
               </svg>
@@ -190,15 +217,20 @@ export function SaveForeverModal({ isOpen, onClose, onSuccess, entry, requiresGo
           <>
             <div className="space-y-3 text-violet-700 dark:text-violet-300 text-sm">
               <p>
-                This will save your entry <strong>permanently</strong> on the blockchain. It cannot be edited or deleted.
+                This will save your entry <strong>permanently</strong> on the blockchain. It cannot
+                be edited or deleted.
               </p>
               <p className="text-amber-600 dark:text-amber-400 font-medium">
                 This action is irreversible. Make sure you want to keep this entry forever.
               </p>
               {entry && (
                 <div className="p-3 rounded-lg bg-violet-100/50 dark:bg-violet-900/30 text-xs">
-                  <p className="font-medium text-violet-800 dark:text-violet-200 truncate">{entry.title}</p>
-                  <p className="text-violet-600 dark:text-violet-400 line-clamp-2 mt-0.5">{entry.description}</p>
+                  <p className="font-medium text-violet-800 dark:text-violet-200 truncate">
+                    {entry.title}
+                  </p>
+                  <p className="text-violet-600 dark:text-violet-400 line-clamp-2 mt-0.5">
+                    {entry.description}
+                  </p>
                 </div>
               )}
               {fee && (
@@ -207,9 +239,7 @@ export function SaveForeverModal({ isOpen, onClose, onSuccess, entry, requiresGo
                 </p>
               )}
             </div>
-            {message && (
-              <p className="mt-3 text-sm text-red-500 dark:text-red-400">{message}</p>
-            )}
+            {message && <p className="mt-3 text-sm text-red-500 dark:text-red-400">{message}</p>}
             <div className="flex gap-3 mt-6">
               <button
                 onClick={onClose}
@@ -250,9 +280,7 @@ export function SaveForeverModal({ isOpen, onClose, onSuccess, entry, requiresGo
             <p className="text-violet-700 dark:text-violet-300 text-sm mb-4">
               Sign with your wallet to prove it&apos;s you. Only you can ever read what you save.
             </p>
-            {message && (
-              <p className="mb-3 text-sm text-red-500 dark:text-red-400">{message}</p>
-            )}
+            {message && <p className="mb-3 text-sm text-red-500 dark:text-red-400">{message}</p>}
             <button
               onClick={handleUnlock}
               className="w-full py-3 rounded-xl glass-button font-medium"

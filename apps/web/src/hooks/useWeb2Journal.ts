@@ -94,5 +94,14 @@ export function useWeb2Journal() {
 
   const totalCount = entries.length;
 
-  return { entries, isLoading, error, addEntry, updateEntry, deleteEntry, totalCount, refetch: fetchEntries };
+  return {
+    entries,
+    isLoading,
+    error,
+    addEntry,
+    updateEntry,
+    deleteEntry,
+    totalCount,
+    refetch: fetchEntries,
+  };
 }

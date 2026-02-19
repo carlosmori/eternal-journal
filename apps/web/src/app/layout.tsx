@@ -15,7 +15,8 @@ const jakarta = Plus_Jakarta_Sans({
 
 export const metadata: Metadata = {
   title: 'Eternal Journal',
-  description: 'A place for your thoughts to live forever. Private, encrypted, and built with care.',
+  description:
+    'A place for your thoughts to live forever. Private, encrypted, and built with care.',
 };
 
 export const viewport: Viewport = {
@@ -31,18 +32,12 @@ export default async function RootLayout({
 }>) {
   const cookieStore = await cookies();
   const themeCookie = cookieStore.get('theme')?.value;
-  const isDark =
-    themeCookie === 'dark' ||
-    (themeCookie === 'light' ? false : undefined);
+  const isDark = themeCookie === 'dark' || (themeCookie === 'light' ? false : undefined);
 
   const htmlClass = isDark === true ? 'dark' : isDark === false ? '' : '';
 
   return (
-    <html
-      lang="en"
-      className={`${jakarta.variable} ${htmlClass}`}
-      suppressHydrationWarning
-    >
+    <html lang="en" className={`${jakarta.variable} ${htmlClass}`} suppressHydrationWarning>
       <body className="font-sans antialiased">
         <Script
           id="theme-init"

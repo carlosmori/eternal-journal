@@ -76,7 +76,13 @@ function GlowingTorus({ isOpening, opacity = 0.6 }: { isOpening?: boolean; opaci
 const PARTICLE_COUNT = 140;
 const CONNECTION_DISTANCE = 0.75;
 
-function ParticleConstellation({ isOpening, opacity = 0.5 }: { isOpening?: boolean; opacity?: number }) {
+function ParticleConstellation({
+  isOpening,
+  opacity = 0.5,
+}: {
+  isOpening?: boolean;
+  opacity?: number;
+}) {
   const pointsRef = useRef<THREE.Points>(null);
   const linesRef = useRef<THREE.LineSegments>(null);
 
@@ -93,7 +99,10 @@ function ParticleConstellation({ isOpening, opacity = 0.5 }: { isOpening?: boole
   const maxLines = Math.floor((PARTICLE_COUNT * (PARTICLE_COUNT - 1)) / 2);
   const lineGeometry = useMemo(() => {
     const geo = new THREE.BufferGeometry();
-    geo.setAttribute('position', new THREE.Float32BufferAttribute(new Float32Array(maxLines * 6), 3));
+    geo.setAttribute(
+      'position',
+      new THREE.Float32BufferAttribute(new Float32Array(maxLines * 6), 3),
+    );
     geo.setDrawRange(0, 0);
     return geo;
   }, [maxLines]);
@@ -154,7 +163,12 @@ function ParticleConstellation({ isOpening, opacity = 0.5 }: { isOpening?: boole
     <group>
       <points ref={pointsRef}>
         <bufferGeometry>
-          <bufferAttribute attach="attributes-position" count={PARTICLE_COUNT} array={positions} itemSize={3} />
+          <bufferAttribute
+            attach="attributes-position"
+            count={PARTICLE_COUNT}
+            array={positions}
+            itemSize={3}
+          />
         </bufferGeometry>
         <pointsMaterial
           size={0.05}
@@ -205,7 +219,12 @@ function SparkleField({ isOpening }: { isOpening?: boolean }) {
   return (
     <points ref={pointsRef}>
       <bufferGeometry>
-        <bufferAttribute attach="attributes-position" count={SPARKLE_COUNT} array={positions} itemSize={3} />
+        <bufferAttribute
+          attach="attributes-position"
+          count={SPARKLE_COUNT}
+          array={positions}
+          itemSize={3}
+        />
       </bufferGeometry>
       <pointsMaterial
         ref={materialRef}
@@ -253,14 +272,14 @@ function HexGrid() {
   return (
     <lineSegments ref={lineRef}>
       <bufferGeometry>
-        <bufferAttribute attach="attributes-position" count={positions.length / 3} array={positions} itemSize={3} />
+        <bufferAttribute
+          attach="attributes-position"
+          count={positions.length / 3}
+          array={positions}
+          itemSize={3}
+        />
       </bufferGeometry>
-      <lineBasicMaterial
-        color="#a78bfa"
-        transparent
-        opacity={0.06}
-        depthWrite={false}
-      />
+      <lineBasicMaterial color="#a78bfa" transparent opacity={0.06} depthWrite={false} />
     </lineSegments>
   );
 }

@@ -31,8 +31,12 @@ describe('WriteQuoteForm', () => {
     const onGuestAdd = jest.fn();
     render(<WriteQuoteForm mode="guest" onGuestAdd={onGuestAdd} />);
 
-    fireEvent.change(screen.getByPlaceholderText("What's on your mind?"), { target: { value: '  My Title  ' } });
-    fireEvent.change(screen.getByPlaceholderText('Write from the heart...'), { target: { value: '  My content  ' } });
+    fireEvent.change(screen.getByPlaceholderText("What's on your mind?"), {
+      target: { value: '  My Title  ' },
+    });
+    fireEvent.change(screen.getByPlaceholderText('Write from the heart...'), {
+      target: { value: '  My content  ' },
+    });
     fireEvent.click(screen.getByText('Save entry'));
 
     await waitFor(() => {

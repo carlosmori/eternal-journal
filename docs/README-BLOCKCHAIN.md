@@ -18,13 +18,13 @@ A dApp where users write "eternal" journal entries (permanently stored on blockc
 
 ## 1. Chain and Environment
 
-| Property | Value |
-|----------|-------|
-| Main blockchain | **Base mainnet** (Coinbase L2, EVM-compatible) |
-| Testnet (development/MVP) | **Base Sepolia** (free for testing) |
-| Chain ID (Sepolia) | 84532 |
-| RPC | https://sepolia.base.org |
-| Explorer | https://sepolia.basescan.org |
+| Property                  | Value                                          |
+| ------------------------- | ---------------------------------------------- |
+| Main blockchain           | **Base mainnet** (Coinbase L2, EVM-compatible) |
+| Testnet (development/MVP) | **Base Sepolia** (free for testing)            |
+| Chain ID (Sepolia)        | 84532                                          |
+| RPC                       | https://sepolia.base.org                       |
+| Explorer                  | https://sepolia.basescan.org                   |
 
 ### Why Base
 
@@ -39,11 +39,11 @@ Blockchain cost depends on **how many bytes you store**, not the "text". More by
 
 #### Cost Table by Entry Size (Feb 2026 data, Base L2)
 
-| Original text | Ciphertext approx | Est. gas | USD approx (gas) |
-|---------------|-------------------|----------|------------------|
-| 1 short phrase (~100 chars) | ~150 bytes | ~120k-150k gas | $0.002-$0.005 |
-| 1 short paragraph (~300 chars) | ~400 bytes | ~200k-250k gas | $0.005-$0.01 |
-| 1 short page (~800 chars) | ~1 KB | ~700k gas | $0.02-$0.04 |
+| Original text                  | Ciphertext approx | Est. gas       | USD approx (gas) |
+| ------------------------------ | ----------------- | -------------- | ---------------- |
+| 1 short phrase (~100 chars)    | ~150 bytes        | ~120k-150k gas | $0.002-$0.005    |
+| 1 short paragraph (~300 chars) | ~400 bytes        | ~200k-250k gas | $0.005-$0.01     |
+| 1 short page (~800 chars)      | ~1 KB             | ~700k gas      | $0.02-$0.04      |
 
 For short entries, the cost is negligible. For long texts, it stops being cheap.
 
@@ -66,11 +66,11 @@ require(ciphertext.length <= MAX_ENTRY_BYTES, "Entry too large");
 
 The user pays **two things** per insertion:
 
-| Concept | Example |
-|---------|---------|
-| Gas (to the network) | $0.005 |
-| Contract fee (to owner) | $0.10 |
-| **Total in wallet** | **$0.105** |
+| Concept                 | Example    |
+| ----------------------- | ---------- |
+| Gas (to the network)    | $0.005     |
+| Contract fee (to owner) | $0.10      |
+| **Total in wallet**     | **$0.105** |
 
 The UI shows this breakdown before signing. No surprises.
 
@@ -93,10 +93,10 @@ The UI shows this breakdown before signing. No surprises.
 
 The contract `owner()` is **not a personal wallet**, but a **Safe multisig**.
 
-| Property | Value |
-|----------|-------|
-| Owner type | Safe (Gnosis Safe) |
-| Signers | 2/3 (or the configuration you choose) |
+| Property             | Value                                           |
+| -------------------- | ----------------------------------------------- |
+| Owner type           | Safe (Gnosis Safe)                              |
+| Signers              | 2/3 (or the configuration you choose)           |
 | Protected operations | `withdraw()`, `setFee()`, `transferOwnership()` |
 
 Flow to withdraw fees:
@@ -243,6 +243,7 @@ Flow:
 ```
 
 The message includes domain and version to:
+
 - Avoid collisions with other dApps using a similar scheme.
 - Avoid accidental reuse across different chains.
 - Allow versioning the encryption scheme in the future (v2, v3...).
@@ -315,14 +316,14 @@ You can cache in `localStorage` to avoid re-reading from the blockchain on each 
 
 ## 4. Fee and Monetization Strategy
 
-| Property | Value |
-|----------|-------|
-| Model | Fixed fee per insertion (pay-per-use, native web3) |
-| Suggested initial fee | 0.00005 ETH (~$0.10 USD) |
-| Payment | Exact (`msg.value == fee`), no overpayments |
-| Adjustable by | Owner (Safe multisig) via `setFee(newFee)` |
-| Fee destination | Accumulated in contract, withdrawable by owner (Safe multisig) via `withdraw()` |
-| Transparency | Fee visible in contract (public), breakdown in UI before signing |
+| Property              | Value                                                                           |
+| --------------------- | ------------------------------------------------------------------------------- |
+| Model                 | Fixed fee per insertion (pay-per-use, native web3)                              |
+| Suggested initial fee | 0.00005 ETH (~$0.10 USD)                                                        |
+| Payment               | Exact (`msg.value == fee`), no overpayments                                     |
+| Adjustable by         | Owner (Safe multisig) via `setFee(newFee)`                                      |
+| Fee destination       | Accumulated in contract, withdrawable by owner (Safe multisig) via `withdraw()` |
+| Transparency          | Fee visible in contract (public), breakdown in UI before signing                |
 
 ### UI Breakdown
 
@@ -345,8 +346,8 @@ You could add logic (e.g. first 5 entries free per month by checking timestamp).
 
 ### Potential Revenue
 
-| Scenario | Calculation |
-|----------|-------------|
+| Scenario                                   | Calculation      |
+| ------------------------------------------ | ---------------- |
 | 1,000 users x 10 entries/month x $0.10 fee | **$1,000/month** |
 
 Scalable without backend.
@@ -427,7 +428,7 @@ const config = getDefaultConfig({
 ```tsx
 import { ConnectButton } from '@rainbow-me/rainbowkit';
 
-<ConnectButton />
+<ConnectButton />;
 ```
 
 ### wagmi Hooks

@@ -11,7 +11,13 @@ interface WriteQuoteFormProps {
   onGoToJournal?: () => void;
 }
 
-export function WriteQuoteForm({ mode, onGuestAdd, onWeb2Add, entryCount = 0, onGoToJournal }: WriteQuoteFormProps) {
+export function WriteQuoteForm({
+  mode,
+  onGuestAdd,
+  onWeb2Add,
+  entryCount = 0,
+  onGoToJournal,
+}: WriteQuoteFormProps) {
   const today = new Date().toISOString().split('T')[0];
   const [date, setDate] = useState(today);
   const [title, setTitle] = useState('');
@@ -101,9 +107,7 @@ export function WriteQuoteForm({ mode, onGuestAdd, onWeb2Add, entryCount = 0, on
           className="glass-input resize-none"
         />
 
-        {message && (
-          <p className="text-sm text-red-500 dark:text-red-400">{message}</p>
-        )}
+        {message && <p className="text-sm text-red-500 dark:text-red-400">{message}</p>}
 
         <motion.button
           whileHover={{ scale: 1.01 }}
@@ -121,7 +125,16 @@ export function WriteQuoteForm({ mode, onGuestAdd, onWeb2Add, entryCount = 0, on
           onClick={onGoToJournal}
           className="mt-4 flex items-center justify-center gap-2 mx-auto text-xs font-medium text-violet-500 dark:text-violet-400 hover:text-violet-700 dark:hover:text-violet-200 transition-colors"
         >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
             <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" />
             <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" />
           </svg>
