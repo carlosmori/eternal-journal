@@ -109,6 +109,9 @@ jobs:
             --cluster ${{ env.ECS_CLUSTER }} \
             --services api-service-stg
 
+      - name: Wait for ALB health check
+        run: sleep 15
+
       - name: Smoke test staging
         run: |
           for i in 1 2 3 4 5; do
