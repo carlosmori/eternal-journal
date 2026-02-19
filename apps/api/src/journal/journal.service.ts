@@ -9,6 +9,7 @@ export interface JournalEntryDto {
   description: string;
   timestamp: number;
   createdAt: Date;
+  updatedAt: Date | null;
 }
 
 @Injectable()
@@ -38,6 +39,7 @@ export class JournalService {
         description: plain.description,
         timestamp: row.timestamp,
         createdAt: row.createdAt,
+        updatedAt: row.updatedAt,
       };
     });
   }
@@ -71,6 +73,7 @@ export class JournalService {
       description: data.description,
       timestamp: row.timestamp,
       createdAt: row.createdAt,
+      updatedAt: row.updatedAt,
     };
   }
 
@@ -111,6 +114,7 @@ export class JournalService {
       description: merged.description,
       timestamp: row.timestamp,
       createdAt: row.createdAt,
+      updatedAt: row.updatedAt,
     };
   }
 

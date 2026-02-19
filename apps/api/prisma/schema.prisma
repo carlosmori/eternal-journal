@@ -22,9 +22,10 @@ model JournalEntry {
   id         String   @id @default(cuid())
   userId     String
   user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  ciphertext String   // Base64 AES-256-GCM: IV + encrypted { date, title, description } + auth tag
+  ciphertext String    // Base64 AES-256-GCM: IV + encrypted { date, title, description } + auth tag
   timestamp  Int
-  createdAt  DateTime @default(now())
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime? @updatedAt
 
   @@index([userId])
 }
