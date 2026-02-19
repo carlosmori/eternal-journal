@@ -1,21 +1,7 @@
 import { getStoredTokens, storeTokens, clearTokens, getGoogleLoginUrl } from '../auth';
 
-const mockStorage: Record<string, string> = {};
-
-beforeAll(() => {
-  Object.defineProperty(globalThis, 'localStorage', {
-    value: {
-      getItem: (key: string) => mockStorage[key] ?? null,
-      setItem: (key: string, value: string) => { mockStorage[key] = value; },
-      removeItem: (key: string) => { delete mockStorage[key]; },
-      clear: () => { for (const k in mockStorage) delete mockStorage[k]; },
-    },
-    writable: true,
-  });
-});
-
 beforeEach(() => {
-  for (const k in mockStorage) delete mockStorage[k];
+  localStorage.clear();
 });
 
 describe('auth utils', () => {
