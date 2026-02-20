@@ -19,6 +19,9 @@ interface ApiEnvironment {
   cpu: number;
   memoryMiB: number;
   imageTag: string;
+  minCapacity?: number;
+  maxCapacity?: number;
+  targetCpuPercent?: number;
 }
 
 export class ComputeStack extends cdk.Stack {
@@ -45,18 +48,24 @@ export class ComputeStack extends cdk.Stack {
       {
         env: 'prod',
         listenerPort: 80,
-        desiredCount: 1,
-        cpu: 256,
-        memoryMiB: 512,
+        desiredCount: 2,
+        cpu: 512,
+        memoryMiB: 1024,
         imageTag: 'latest',
+        minCapacity: 2,
+        maxCapacity: 4,
+        targetCpuPercent: 60,
       },
       {
         env: 'stg',
         listenerPort: 8080,
         desiredCount: 1,
-        cpu: 256,
-        memoryMiB: 512,
+        cpu: 512,
+        memoryMiB: 1024,
         imageTag: 'stg',
+        minCapacity: 1,
+        maxCapacity: 3,
+        targetCpuPercent: 60,
       },
     ];
 
@@ -113,6 +122,19 @@ export class ComputeStack extends cdk.Stack {
       securityGroups: [securityGroup],
       serviceName: `api-service${suffix === 'prod' ? '' : `-${suffix}`}`,
     });
+
+    if (config.minCapacity && config.maxCapacity) {
+      const scaling = service.autoScaleTaskCount({
+        minCapacity: config.minCapacity,
+        maxCapacity: config.maxCapacity,
+      });
+
+      scaling.scaleOnCpuUtilization(`CpuScaling-${suffix}`, {
+        targetUtilizationPercent: config.targetCpuPercent ?? 70,
+        scaleInCooldown: cdk.Duration.seconds(60),
+        scaleOutCooldown: cdk.Duration.seconds(60),
+      });
+    }
 
     const targetGroup = new elbv2.ApplicationTargetGroup(this, `ApiTg-${suffix}`, {
       vpc: cluster.vpc,

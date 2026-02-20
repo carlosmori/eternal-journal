@@ -211,6 +211,12 @@ yarn dev
 - **Frontend**: http://localhost:3000
 - **API**: http://localhost:3001
 
+## Load Testing
+
+Stress tests were run with [k6](https://k6.io/) against the staging ECS service to measure performance under load and validate auto-scaling behavior. The main finding: upgrading from 0.25 to 0.5 vCPU with ECS auto-scaling (min 1, max 3 tasks, CPU target 60%) reduced p(95) latency by 59% and doubled throughput from 331 to 731 req/s under 300 concurrent users.
+
+Full results and methodology: [apps/api/load-tests/RESULTS.md](apps/api/load-tests/RESULTS.md)
+
 ## Documentation
 
 - [docs/PROJECT-OVERVIEW.md](docs/PROJECT-OVERVIEW.md) -- High-level architecture and data flow
