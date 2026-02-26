@@ -44,7 +44,7 @@ jobs:
             --cluster ${{ env.ECS_CLUSTER }} \
             --task-definition eternal-journal-api-prod \
             --launch-type FARGATE \
-            --network-configuration 'awsvpcConfiguration={subnets=[subnet-07239a493147ead88,subnet-0d3c67db03cf3f9bb],securityGroups=[sg-05df2090470173161],assignPublicIp=ENABLED}' \
+            --network-configuration 'awsvpcConfiguration={subnets=[${{ secrets.SUBNET_IDS }}],securityGroups=[${{ secrets.SECURITY_GROUP_ID }}],assignPublicIp=ENABLED}' \
             --overrides '{
               "containerOverrides": [{
                 "name": "api",

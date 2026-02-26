@@ -5,7 +5,7 @@ import * as dotenv from 'dotenv';
 
 dotenv.config();
 
-const DEPLOYER_PRIVATE_KEY = process.env.DEPLOYER_PRIVATE_KEY || '0x' + '0'.repeat(64);
+const DEPLOYER_PRIVATE_KEY = process.env.DEPLOYER_PRIVATE_KEY;
 
 const config: HardhatUserConfig = {
   solidity: '0.8.28',
@@ -13,12 +13,12 @@ const config: HardhatUserConfig = {
     baseSepolia: {
       url: 'https://sepolia.base.org',
       chainId: 84532,
-      accounts: [DEPLOYER_PRIVATE_KEY],
+      accounts: DEPLOYER_PRIVATE_KEY ? [DEPLOYER_PRIVATE_KEY] : [],
     },
     base: {
       url: 'https://mainnet.base.org',
       chainId: 8453,
-      accounts: [DEPLOYER_PRIVATE_KEY],
+      accounts: DEPLOYER_PRIVATE_KEY ? [DEPLOYER_PRIVATE_KEY] : [],
     },
   },
 };
