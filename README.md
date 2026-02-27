@@ -1,5 +1,9 @@
 # Eternal Journal
 
+**[Video demo](https://drive.google.com/file/d/1keayu55xlvh3LjaaIcmDEcrAB5lzq8fh/view?usp=sharing)** · **[Live demo](https://main.d1vim3a1xy9u87.amplifyapp.com/)** (Guest mode only — in-memory, no backend)
+
+---
+
 A personal journaling app where every entry is encrypted and private. It works like any normal web app -- sign in with Google, write, done. But it also lets you save entries on the blockchain so they last forever, immutably, without depending on any server.
 
 Web3 is an optional feature, not the main path. The app is fully functional as a traditional Web2 application. Blockchain integration exists for users who want permanent, immutable storage, but since connecting a wallet adds friction for the average user, it's simply an extra capability.
@@ -199,7 +203,7 @@ cp apps/api/.env.example apps/api/.env
 cp apps/web/.env.example apps/web/.env
 ```
 
-Edit `apps/api/.env` -- the defaults work out of the box for local development. To enable Google OAuth sign-in, set `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` with credentials from the [Google Cloud Console](https://console.cloud.google.com/apis/credentials). If you skip this, **Guest mode still works** (entries saved in localStorage, no auth required).
+Edit `apps/api/.env` -- the defaults work out of the box for local development. To enable Google OAuth sign-in, set `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` with credentials from the [Google Cloud Console](https://console.cloud.google.com/apis/credentials). **Important:** if your OAuth consent screen is in "Testing" mode, add the email addresses of test users in Google Cloud (APIs & Services → OAuth consent screen → Test users); otherwise they won't be able to sign in. If you skip OAuth setup, **Guest mode still works** (entries saved in localStorage, no auth required).
 
 4. **Run database migrations:**
 
