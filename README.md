@@ -168,9 +168,21 @@ The health endpoint returns `{"status":"ok","version":"<commit-sha>"}` to verify
 
 ## Local Development
 
-### With Docker (recommended)
+### Prerequisites
 
-1. **Start PostgreSQL:**
+- **Node.js** >= 20
+- **Yarn** (enabled via `corepack enable`)
+- **Docker** (for PostgreSQL, or a local PostgreSQL 16+ instance)
+
+### Quick Start
+
+1. **Install dependencies:**
+
+```bash
+yarn install
+```
+
+2. **Start PostgreSQL:**
 
 ```bash
 docker run -d --name eternal-journal-db \
@@ -180,36 +192,37 @@ docker run -d --name eternal-journal-db \
   postgres:16
 ```
 
-2. **Configure and migrate:**
+3. **Configure environment variables:**
 
 ```bash
 cp apps/api/.env.example apps/api/.env
-# Edit apps/api/.env with your Google OAuth credentials (GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET)
-
-cd apps/api && npx prisma migrate dev --name init
-cd ../..
+cp apps/web/.env.example apps/web/.env
 ```
 
-3. **Install and run:**
+Edit `apps/api/.env` -- the defaults work out of the box for local development. To enable Google OAuth sign-in, set `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` with credentials from the [Google Cloud Console](https://console.cloud.google.com/apis/credentials). If you skip this, **Guest mode still works** (entries saved in localStorage, no auth required).
+
+4. **Run database migrations:**
 
 ```bash
-yarn install
-yarn dev
+cd apps/api && npx prisma migrate dev --name init && cd ../..
 ```
 
-### Without Docker
+5. **Start the dev servers:**
 
 ```bash
-yarn install
 yarn dev
 ```
-
-> Requires PostgreSQL running on `localhost:5432` with database `eternal_journal`. See [docs/DATABASE-SETUP.md](docs/DATABASE-SETUP.md).
-
----
 
 - **Frontend**: http://localhost:3000
 - **API**: http://localhost:3001
+
+### Using Docker Compose
+
+Alternatively, `docker-compose up` starts PostgreSQL, the API, and the frontend together. You still need to create `apps/api/.env` first (step 3 above).
+
+### Without Docker
+
+If you have PostgreSQL running locally on `localhost:5432`, create the `eternal_journal` database and follow from step 1. See [docs/DATABASE-SETUP.md](docs/DATABASE-SETUP.md) for details.
 
 ## Load Testing
 
